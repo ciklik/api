@@ -1,0 +1,17 @@
+{
+  "name": "openapi-redoc-docs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Builds a standalone Redoc HTML from openapi.yaml",
+  "scripts": {
+    "lint": "redocly lint openapi.yaml",
+    "bundle": "redocly bundle openapi.yaml -o openapi.bundle.yaml",
+    "build:docs": "redocly build-docs openapi.yaml -o dist/index.html",
+    "build": "npm run lint && npm run build:docs",
+    "serve": "npx http-server dist -p 8080 -c-1"
+  },
+  "devDependencies": {
+    "@redocly/cli": "^1.16.0",
+    "http-server": "^14.1.1"
+  }
+}

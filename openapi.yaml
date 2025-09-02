@@ -1,0 +1,3221 @@
+openapi: 3.1.0
+servers:
+  - url: https://{environment}.ciklik.co/api/v3
+    description: Serveur API
+    variables:
+      environment:
+        default: app
+        enum:
+          - app # URL de Production
+          - demonstration # URL de Test/Démonstration
+info:
+  title: Ciklik API
+  version: 1.0.0
+  description: "# Bienvenue sur l'API Ciklik. Vous pouvez l'utiliser pour accéder aux ressources de votre compte, ou lancer des actions de base.\n## API Endpoints\nThe base endpoint is https://{environment}.ciklik.co/api/v3\n## Authentification\nL'API supporte l'authentification via Bearer token:\n- Bearer Token\n\nExemple :\n  ```curl\n  curl --location 'https://{environment}.ciklik.co/api/v3' --header 'Authorization: Bearer <Ciklik Token>'\n  ```\n## Request Limit\nLe nombre de requête est limité à 100 par minute. Si la limite est atteinte, la réponse http sera `429 Too Many Requests`.\n## Filtres\nCertains endpoints de l'API prennent en charge le filtrage des résultats sur un ensemble spécifié de champs. Chaque endpoint qui prend en charge le filtrage énumérera les champs qui peuvent être filtrés. Plusieurs champs peuvent être combinés en utilisant un caractère esperluette &\n\nExemple: `?filter[status]=received&filter[created_at]=2023-11-17`\n## Pagination\nLes listes de résultats de l'API sont paginées. La limite est de 20 éléments par requête. Vous pouvez obtenir les différentes pages avec la query string `page`, default value `1`.\n\nLe nombre total d'éléments dans une liste est disponible dans un champ `total` .\n\nExemple: `?page=2`\n"
+
+tags:
+  - name: tenant
+    description: Opérations liées à l'entité "Website".
+  - name: products
+    description: Opérations liées aux produits
+  - name: webhooks
+    description: Opérations liées aux webhooks
+  - name: subscriptions
+    description: Opérations liées aux abonnements
+  - name: deliveries
+    description: Opérations liées aux bons de livraison
+  - name: kpis
+    description: Opérations liées aux indicateurs de performance
+  - name: addresses
+    description: Opérations liées aux bons de adresses
+  - name: customers
+    description: Opérations liées aux comptes utilisateurs
+  - name: transactions
+    description: Opérations liées aux transactions
+paths:
+  /whoiam:
+    get:
+      summary: Récupérer les données de l'entité "Website"
+      tags:
+        - tenant
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Réponse réussie
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebsiteEntity"
+        403:
+          description: Authentification requise
+        401:
+          description: Accès non autorisé
+    put:
+      summary: Mettre à jour les métadonnées d'un site web (WebsiteEntity)
+      description: Permet de mettre à jour les métadonnées d'un site web (WebsiteEntity) en modifiant ou ajoutant des clés/valeurs au champ "metadata".
+      tags:
+        - tenant
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                metadata:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: |
+                    Les clés commençant par "ciklik_encrypted_" seront automatiquement encryptées".
+              example:
+                metadata:
+                  key1: "value1"
+                  key2: "value2"
+                  ciklik_encrypted_key2: "value-encrypted"
+      responses:
+        200:
+          description: Succès - Les métadonnées ont été mises à jour avec succès.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebsiteEntity"
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        403:
+          description: Authentification requise
+        401:
+          description: Accès non autorisé
+  /products:
+    get:
+      summary: Récupérer une liste de produits
+      tags:
+        - products
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: filter[id]
+          in: query
+          description: Filtrer par ID du produit
+          schema:
+            type: integer
+        - name: filter[name]
+          in: query
+          description: Filtrer par nom du produit
+          schema:
+            type: string
+        - name: filter[id_category]
+          in: query
+          description: Filtrer par ID de catégorie
+          schema:
+            type: integer
+        - name: filter[quantity]
+          in: query
+          description: Filtrer par quantité
+          schema:
+            type: integer
+        - name: filter[price]
+          in: query
+          description: Filtrer par prix
+          schema:
+            type: number
+        - name: filter[active]
+          in: query
+          description: Filtrer par état d'activité
+          schema:
+            type: boolean
+        - name: filter[slug]
+          in: query
+          description: Filtrer par slug
+          schema:
+            type: string
+        - name: filter[virtual_product]
+          in: query
+          description: Filtrer par produit virtuel
+          schema:
+            type: boolean
+        - name: filter[gift_card]
+          in: query
+          description: Filtrer par carte cadeau
+          schema:
+            type: boolean
+        - name: filter[gift_plan]
+          in: query
+          description: Filtrer par plan cadeau
+          schema:
+            type: string
+        - name: filter[disable_seo]
+          in: query
+          description: Filtrer par désactivation SEO
+          schema:
+            type: boolean
+        - name: filter[ref]
+          in: query
+          description: Filtrer par référence
+          schema:
+            type: string
+        - name: filter[composable]
+          in: query
+          description: Filtrer par composable
+          schema:
+            type: boolean
+        - name: sort
+          in: query
+          description: "Trier les résultats (ex: -name pour un tri descendant)"
+          schema:
+            type: string
+            enum:
+              - plan_id
+              - customer_id
+              - canceled_at
+              - active
+              - start_date
+              - first_renewal_date
+              - end_date
+              - created_at
+              - grace_period
+              - grace_months
+              - auto_pause_at
+              - engaged_date
+              - gift_activation_code
+              - update_transporter_at
+              - transporter_id
+              - next_transporter_id
+              - next_coupon_id
+              - next_billing
+              - interval
+              - interval_count
+        - name: page
+          in: query
+          description: Numéro de la page pour la pagination
+          schema:
+            type: integer
+        - name: per_page
+          in: query
+          description: Nombre d'éléments par page
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Liste de produits récupérée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProductEntity"
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                      next:
+                        type: string
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+        401:
+          description: Accès non autorisé
+        403:
+          description: Authentification requise
+    post:
+      summary: Créer ou mettre à jour un produit
+      tags:
+        - products
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductEntityCreation"
+      responses:
+        200:
+          description: Produit créé ou mis à jour avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ProductEntity"
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        403:
+          description: Authentification requise
+        401:
+          description: Accès non autorisé
+  /products/{ref}:
+    get:
+      summary: Récupérer un produit par référence (SKU)
+      tags:
+        - products
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: ref
+          in: path
+          description: Référence du produit (SKU)
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Produit récupéré avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ProductEntity"
+        403:
+          description: Authentification requise
+        401:
+          description: Accès non autorisé
+        404:
+          description: Produit non trouvé
+    patch:
+      summary: Mettre à jour un produit par référence (SKU)
+      tags:
+        - products
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: ref
+          in: path
+          description: Référence du produit (SKU)
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductEntityUpdate"
+      responses:
+        200:
+          description: Produit mis à jour avec succès
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductEntity"
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        403:
+          description: Authentification requise
+        401:
+          description: Accès non autorisé
+  /webhooks:
+    get:
+      summary: Lister le dernier webhook envoyé
+      tags:
+        - webhooks
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: event_type
+          in: query
+          description: Nom de l'évènement à avoir
+          required: true
+          schema:
+            type: string
+            enum:
+              - created_subscription
+              - updated_subscription
+              - deleted_subscription
+              - created_checkoutorder
+              - updated_checkoutorder
+              - created_checkouttransaction
+              - updated_checkouttransaction
+              - created_checkoutinvoice
+              - created_address
+              - updated_address
+              - created_shippingbox
+              - updated_shippingbox
+              - deleted_shippingbox
+              - created_user
+              - updated_user
+              - created_optin
+              - updated_optin
+      responses:
+        200:
+          description: Un évènement existe, ou le nom de l'évènement existe. Si un évènement existe, une représentation de l'objet correspondant sera retourné
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: {}
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        403:
+          description: Authentification requise
+        401:
+          description: Accès non autorisé
+    post:
+      summary: Ajouter un webhook
+      tags:
+        - webhooks
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                event_type:
+                  type: string
+                  enum:
+                    - created_subscription
+                    - updated_subscription
+                    - deleted_subscription
+                    - created_checkoutorder
+                    - updated_checkoutorder
+                    - created_checkouttransaction
+                    - updated_checkouttransaction
+                    - created_checkoutinvoice
+                    - created_address
+                    - updated_address
+                    - created_shippingbox
+                    - updated_shippingbox
+                    - deleted_shippingbox
+                    - created_user
+                    - updated_user
+                    - created_optin
+                    - updated_optin
+                hook_url:
+                  type: string
+              required:
+                - hook_url
+                - event_type
+      responses:
+        200:
+          description: Webhook ajouté avec succès
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebsiteEntity"
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        403:
+          description: Authentification requise
+        401:
+          description: Accès non autorisé
+    delete:
+      summary: Supprimer un webhook
+      tags:
+        - webhooks
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                event_type:
+                  type: string
+                  enum:
+                    - created_subscription
+                    - updated_subscription
+                    - deleted_subscription
+                    - created_checkoutorder
+                    - updated_checkoutorder
+                    - created_checkouttransaction
+                    - updated_checkouttransaction
+                    - created_checkoutinvoice
+                    - created_address
+                    - updated_address
+                    - created_shippingbox
+                    - updated_shippingbox
+                    - deleted_shippingbox
+                    - created_user
+                    - updated_user
+                    - created_optin
+                    - updated_optin
+              required:
+                - event_type
+      responses:
+        200:
+          description: Webhook supprimé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebsiteEntity"
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        403:
+          description: Authentification requise
+        401:
+          description: Accès non autorisé
+  /subscriptions/{id}:
+    get:
+      tags:
+        - subscriptions
+      security:
+        - bearerAuth: [ ]
+      summary: Obtenir les détails d'un abonnement
+      parameters:
+        - name: id
+          in: path
+          description: UUID de l'abonnement
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Réponse réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SubscriptionEntity'
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        403:
+          description: Authentification requise
+        401:
+          description: Accès non autorisé
+        404:
+          description: Abonnement introuvable
+    put:
+      tags:
+        - subscriptions
+      security:
+        - bearerAuth: [ ]
+      summary: Mettre à jour un abonnement
+      description: Permet de mettre à jour un abonnement, le résilier, le mettre en pause pour 1, 2 ou 3 mois, ou le relancer.
+      parameters:
+        - name: id
+          in: path
+          description: UUID de l'abonnement à mettre à jour
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: Données à modifier sur l'abonnement
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                months:
+                  type: number
+                  format: float
+                  minimum: 1
+                  maximum: 3
+                  description: Nombre de mois pour mettre en pause l'abonnement (1, 2 ou 3 mois) (!= résiliation).
+                active:
+                  type: boolean
+                  description: Indique si l'abonnement est actif.
+                notification:
+                  type: boolean
+                  description: Lors de la résiliation d'un abonnement, notifier ou non par email.
+                  default: true
+                pause:
+                  type: boolean
+                  description: Indique si l'abonnement doit être mis en pause.
+                next_billing:
+                  type: string
+                  description: Modifier la date du prochain paiement
+                content:
+                  type: array
+                  description: nouveau contenu de l'abonnement, via external_id
+                  items:
+                    type: object
+                    properties:
+                      external_id:
+                        type: string
+                        description: Identifiant externe du produit
+                      quantity:
+                        type: integer
+                        description: Quantité du produit
+                      interval:
+                        type: string
+                        description: Intervalle de renouvellement
+                        enum:
+                          - month
+                          - week
+                          - day
+                      interval_count:
+                        type: integer
+                        description: Nombre d'intervalles
+                    example:
+                      external_id: "123"
+                      quantity: 1
+                      interval: month
+                      interval_count: 1
+
+      responses:
+        200:
+          description: Succès - Abonnement mis à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SubscriptionEntity'
+
+        401:
+          description: Non autorisé - L'authentification est requise.
+        403:
+          description: Interdit - Accès non autorisé.
+        404:
+          description: Non trouvé - Abonnement non trouvé.
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+  /subscriptions:
+    get:
+      tags:
+        - subscriptions
+      security:
+        - bearerAuth: [ ]
+      summary: Récupérer une liste d'abonnement
+      description: Permet de récupérer une liste d'abonnements avec différents filtres et options de tri.
+      parameters:
+        - name: filter[activated]
+          in: query
+          description: Filtre par abonnements activés.
+          schema:
+            type: boolean
+        - name: filter[canceled]
+          in: query
+          description: Filtre par abonnements annulés.
+          schema:
+            type: boolean
+        - name: filter[created_at_before]
+          in: query
+          description: Filtre par date de création avant la date spécifiée.
+          schema:
+            type: string
+            format: date
+        - name: filter[created_at_after]
+          in: query
+          description: Filtre par date de création après la date spécifiée.
+          schema:
+            type: string
+            format: date
+        - name: filter[canceled_since_before]
+          in: query
+          description: Filtre par date d'annulation avant la date spécifiée.
+          schema:
+            type: string
+            format: date
+        - name: filter[canceled_since_after]
+          in: query
+          description: Filtre par date d'annulation après la date spécifiée.
+          schema:
+            type: string
+            format: date
+        - name: filter[expired]
+          in: query
+          description: Filtre par abonnements expirés.
+          schema:
+            type: boolean
+        - name: filter[in_grace_period]
+          in: query
+          description: Filtre par abonnements en période de grâce.
+          schema:
+            type: boolean
+        - name: filter[engaged_before]
+          in: query
+          description: Filtre par date d'engagement avant la date spécifiée.
+          schema:
+            type: string
+            format: date
+        - name: filter[engaged_after]
+          in: query
+          description: Filtre par date d'engagement après la date spécifiée.
+          schema:
+            type: string
+            format: date
+        - name: filter[next_billing_before]
+          in: query
+          description: Filtre par date de prochaine facturation avant la date spécifiée.
+          schema:
+            type: string
+            format: date
+        - name: filter[next_billing_after]
+          in: query
+          description: Filtre par date de prochaine facturation après la date spécifiée.
+          schema:
+            type: string
+            format: date
+        - name: filter[end_date_before]
+          in: query
+          description: Filtre par date de fin d'abonnement avant la date spécifiée.
+          schema:
+            type: string
+            format: date
+        - name: filter[end_date_after]
+          in: query
+          description: Filtre par date de fin d'abonnement après la date spécifiée.
+          schema:
+            type: string
+            format: date
+        - name: filter[subscriptions_by_email]
+          in: query
+          description: Filtre par adresse e-mail.
+          schema:
+            type: string
+            format: email
+        - name: filter[plan_id]
+          in: query
+          description: Filtre par ID de plan.
+          schema:
+            type: string
+            maxLength: 255
+        - name: filter[customer_id]
+          in: query
+          description: Filtre par ID de client.
+          schema:
+            type: string
+            maxLength: 255
+        - name: sort
+          in: query
+          description: Options de tri.
+          schema:
+            type: string
+            enum:
+              - plan_id
+              - customer_id
+              - canceled_at
+              - active
+              - start_date
+              - first_renewal_date
+              - end_date
+              - created_at
+              - grace_period
+              - grace_months
+              - auto_pause_at
+              - engaged_date
+              - gift_activation_code
+              - update_transporter_at
+              - transporter_id
+              - next_transporter_id
+              - next_coupon_id
+              - next_billing
+              - interval
+              - interval_count
+      responses:
+        200:
+          description: Liste de abonnements récupérée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SubscriptionEntity"
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                      next:
+                        type: string
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+        401:
+          description: Accès non autorisé
+        403:
+          description: Authentification requise
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+  /delivery:
+    get:
+      summary: Liste des bons de livraison
+      tags:
+        - deliveries
+      security:
+        - bearerAuth: [ ]
+      description: Récupère la liste de tous les bons de livraison de l'application.
+      parameters:
+        - name: filter[uuid]
+          in: query
+          description: Filtrer par UUID du bon de livraison.
+          schema:
+            type: string
+        - name: filter[subscription_uuid]
+          in: query
+          description: Filtrer par UUID de la souscription associée.
+          schema:
+            type: string
+        - name: filter[address_id]
+          in: query
+          description: Filtrer par ID de l'adresse.
+          schema:
+            type: integer
+        - name: filter[phone]
+          in: query
+          description: Filtrer par numéro de téléphone.
+          schema:
+            type: string
+        - name: filter[tracking_number]
+          in: query
+          description: Filtrer par numéro de suivi.
+          schema:
+            type: string
+        - name: filter[customer_id]
+          in: query
+          description: Filtrer par ID du client.
+          schema:
+            type: string
+        - name: filter[transporter_reference]
+          in: query
+          description: Filtrer par référence du transporteur.
+          schema:
+            type: string
+        - name: filter[transporter_reference]
+          in: query
+          description: Filtrer par référence transporteur.
+          schema:
+            type: string
+        - name: filter[transporter_id]
+          in: query
+          description: Filtrer par ID du transporteur.
+          schema:
+            type: integer
+        - name: filter[first_name]
+          in: query
+          description: Filtrer par prénom.
+          schema:
+            type: string
+        - name: filter[last_name]
+          in: query
+          description: Filtrer par nom de famille.
+          schema:
+            type: string
+        - name: filter[postcode]
+          in: query
+          description: Filtrer par code postal.
+          schema:
+            type: string
+        - name: filter[address1]
+          in: query
+          description: Filtrer par adresse ligne 1.
+          schema:
+            type: string
+        - name: filter[address2]
+          in: query
+          description: Filtrer par adresse ligne 2.
+          schema:
+            type: string
+        - name: filter[city]
+          in: query
+          description: Filtrer par ville.
+          schema:
+            type: string
+        - name: filter[country]
+          in: query
+          description: Filtrer par pays.
+          schema:
+            type: string
+        - name: filter[mail]
+          in: query
+          description: Filtrer par adresse e-mail.
+          schema:
+            type: string
+        - name: filter[transporter_name]
+          in: query
+          description: Filtrer par nom du transporteur.
+          schema:
+            type: string
+        - name: filter[plan]
+          in: query
+          description: Filtrer par nom du plan.
+          schema:
+            type: string
+        - name: filter[iso_code]
+          in: query
+          description: Filtrer par code ISO du pays.
+          schema:
+            type: string
+        - name: filter[relay_id]
+          in: query
+          description: Filtrer par ID du relais.
+          schema:
+            type: integer
+        - name: filter[orderable_name]
+          in: query
+          description: Filtrer par nom de l'élément commandable.
+          schema:
+            type: string
+        - name: filter[orderable_id]
+          in: query
+          description: Filtrer par ID de l'élément commandable.
+          schema:
+            type: integer
+        - name: filter[orderable_type]
+          in: query
+          description: Filtrer par type de l'élément commandable.
+          schema:
+            type: string
+        - name: filter[order_id]
+          in: query
+          description: Filtrer par ID de commande.
+          schema:
+            type: integer
+        - name: filter[tracking_url]
+          in: query
+          description: Filtrer par URL de suivi.
+          schema:
+            type: string
+        - name: filter[quantity]
+          in: query
+          description: Filtrer par quantité.
+          schema:
+            type: string
+        - name: filter[ref]
+          in: query
+          description: Filtrer par référence.
+          schema:
+            type: string
+        - name: filter[status]
+          in: query
+          description: Filtrer par statut du bon de livraison.
+          schema:
+            type: string
+        - name: filter[division]
+          in: query
+          description: Filtrer état.
+          schema:
+            type: string
+        - name: filter[company_name]
+          in: query
+          description: Filtrer par nom de l'entreprise.
+          schema:
+            type: string
+        - name: filter[created_at_before]
+          in: query
+          description: Filtrer par date de création antérieure.
+          schema:
+            type: string
+            format: date-time
+        - name: filter[created_at_after]
+          in: query
+          description: Filtrer par date de création ultérieure.
+          schema:
+            type: string
+            format: date-time
+        - name: filter[updated_at_before]
+          in: query
+          description: Filtrer par date de mise à jour antérieure.
+          schema:
+            type: string
+            format: date-time
+        - name: filter[updated_at_after]
+          in: query
+          description: Filtrer par date de mise à jour ultérieure.
+          schema:
+            type: string
+            format: date-time
+        - name: filter[scheduled_at_before]
+          in: query
+          description: Filtrer par date prévue antérieure.
+          schema:
+            type: string
+            format: date-time
+        - name: filter[scheduled_at_after]
+          in: query
+          description: Filtrer par date prévue ultérieure.
+          schema:
+            type: string
+            format: date-time
+        - name: sort
+          in: query
+          description: Trier les résultats par un champ donné.
+          schema:
+            type: string
+            enum:
+              - uuid
+              - subscription_uuid
+              - address_id
+              - phone
+              - tracking_number
+              - customer_id
+              - transporter_reference
+              - transporter_id
+              - created_at
+              - updated_at
+              - first_name
+              - last_name
+              - postcode
+              - address1
+              - address2
+              - city
+              - country
+              - mail
+              - transporter_name
+              - plan
+              - iso_code
+              - relay
+              - relay_id
+              - orderable_name
+              - orderable_id
+              - orderable_type
+              - order_id
+              - scheduled_at
+              - tracking_url
+              - quantity
+              - ref
+              - status
+              - division
+              - company_name
+      responses:
+        200:
+          description: Succès - Liste des bons de livraison récupérée avec succès.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeliverySchema'
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                      next:
+                        type: string
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        401:
+          description: Non autorisé - L'authentification est requise.
+        403:
+          description: Interdit - Accès non autorisé.
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+  /delivery/{id}:
+    get:
+      summary: Liste détails d'un bon de livraison
+      tags:
+        - deliveries
+      security:
+        - bearerAuth: [ ]
+      description: Récupère la liste des élements d'un bon de livraison.
+      parameters:
+        - name: id
+          in: path
+          description: ID de l'abonnement
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Succès - Liste des bons de livraison récupérée avec succès.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeliverySchema'
+        401:
+          description: Non autorisé - L'authentification est requise.
+        403:
+          description: Interdit - Accès non autorisé.
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+    put:
+      summary: Mettre à jour un BL
+      tags:
+        - deliveries
+      security:
+        - bearerAuth: [ ]
+      description: Permet de le considérer comme expédié, et associer un lien de suivi.
+      parameters:
+        - name: id
+          in: path
+          description: ID de l'abonnement
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tracking_number:
+                  type: string
+                  description: Numéro de suivi à associer au bon de livraison
+                notification:
+                  type: boolean
+                  description: Envoyer une notification d'expédition
+                status:
+                  type: string
+                  description: Nouveau statut du BL
+                  enum:
+                    - created
+                    - pending
+                    - shipped
+                    - delivered
+                    - scheduled
+                    - canceled
+      responses:
+        200:
+          description: Succès - Liste des bons de livraison traités avec succès.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeliverySchema'
+        401:
+          description: Non autorisé - L'authentification est requise.
+        403:
+          description: Interdit - Accès non autorisé.
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+    delete:
+      tags:
+        - deliveries
+      security:
+        - bearerAuth: [ ]
+      summary: Supprimer un élément d'un bon de livraison
+      description: Supprime un élément du bon de livraison en utilisant son ID.
+      parameters:
+        - name: id
+          in: path
+          description: ID de l'élément du bon de livraison à supprimer
+          required: true
+          schema:
+            type: integer  # Assurez-vous que le type de données est correct
+      responses:
+        200:
+          description: Succès
+          content:
+            application/json:
+              example:
+                data:
+                  success: true
+        403:
+          description: Non autorisé
+        401:
+          description: Non autorisé, veuillez vous authentifier
+        404:
+          description: Élément du bon de livraison non trouvé
+  /orders:
+    get:
+      tags:
+        - orders
+      security:
+        - bearerAuth: [ ]
+      summary: Récupérer la liste des commandes
+      parameters:
+        - in: query
+          name: user_id
+          description: ID de l'utilisateur
+          schema:
+            type: integer
+        - in: query
+          name: address_id
+          description: ID de l'adresse
+          schema:
+            type: integer
+        - in: query
+          name: invoice_address_id
+          description: ID de l'adresse de facturation
+          schema:
+            type: integer
+        - in: query
+          name: transporter_id
+          description: ID du transporteur
+          schema:
+            type: integer
+        - in: query
+          name: status
+          description: Statut de la commande
+          schema:
+            type: string
+            enum:
+              - canceled
+              - completed
+              - failed
+              - in_creation
+              - in_process
+              - pending
+              - need_action
+        - in: query
+          name: subscription_uuid
+          description: UUID de l'abonnement
+          schema:
+            type: string
+            maxLength: 255
+        - in: query
+          name: invoice_id
+          description: ID de la facture
+          schema:
+            type: integer
+        - in: query
+          name: total_paid
+          description: Montant total payé
+          schema:
+            type: number
+        - in: query
+          name: next_try
+          description: Prochaine tentative
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: created_at_before
+          description: Date de création avant
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: created_at_after
+          description: Date de création après
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: updated_at_before
+          description: Date de mise à jour avant
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: updated_at_after
+          description: Date de mise à jour après
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: next_try_before
+          description: Prochaine tentative avant
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: next_try_after
+          description: Prochaine tentative après
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: by_customer_uuid
+          description: UUID du client
+          schema:
+            type: string
+            maxLength: 255
+        - in: query
+          name: source
+          description: Source de la commande
+          schema:
+            type: string
+            enum:
+              - utm
+              - referral
+              - regain
+              - retry
+              - renew
+              - backend
+              - unsub_voucher
+              - unsub_postpone
+              - reactivation_offer
+              - followup
+        - in: query
+          name: sort
+          description: Champ de tri
+          schema:
+            type: string
+            enum:
+              - user_id
+              - address_id
+              - invoice_address_id
+              - transporter_id
+              - status
+              - subscription_uuid
+              - invoice_id
+              - total_paid
+              - next_try
+              - source
+              - created_at
+              - updated_at
+        - in: query
+          name: prestashop_order_id
+          description: Correspondance commande prestasop
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OrderSchema'
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                      next:
+                        type: string
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        403:
+          description: Authentification requise
+        401:
+          description: Accès non autorisé
+  /orders/{id}:
+    get:
+      summary: Récupérer le détail d'une commande
+      tags:
+        - orders
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: ID de la commande à récupérer
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OrderSchema'
+
+        401:
+          description: Accès non autorisé
+        403:
+          description: Accès interd
+        404:
+          description: La commande n'a pas été trouvée
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+  /addresses:
+    get:
+      summary: Liste des adresses
+      tags:
+        - addresses
+      security:
+        - bearerAuth: [ ]
+      description: Cette route permet de lister des adresses.
+      parameters:
+        - in: query
+          name: filter
+          description: Filtres pour la liste d'adresses
+          schema:
+            type: object
+            properties:
+              created_at_before:
+                type: string
+                format: date
+                description: Date de création avant laquelle filtrer.
+              created_at_after:
+                type: string
+                format: date
+                description: Date de création après laquelle filtrer.
+              updated_at_before:
+                type: string
+                format: date
+                description: Date de mise à jour avant laquelle filtrer.
+              updated_at_after:
+                type: string
+                format: date
+                description: Date de mise à jour après laquelle filtrer.
+              by_customer_uuid:
+                type: string
+                maxLength: 255
+                description: UUID du client pour filtrer.
+              region_id:
+                type: integer
+                description: ID de la région pour filtrer.
+              user_id:
+                type: integer
+                description: ID de l'utilisateur pour filtrer.
+              address:
+                type: string
+                maxLength: 32
+                description: Adresse pour filtrer.
+              address1:
+                type: string
+                maxLength: 32
+                description: Adresse 1 pour filtrer.
+              postcode:
+                type: string
+                maxLength: 255
+                description: Code postal pour filtrer.
+              city:
+                type: string
+                maxLength: 255
+                description: Ville pour filtrer.
+              first_name:
+                type: string
+                maxLength: 255
+                description: Prénom pour filtrer.
+              last_name:
+                type: string
+                maxLength: 255
+                description: Nom pour filtrer.
+              company_name:
+                type: string
+                maxLength: 255
+                description: Nom de la société pour filtrer.
+              division:
+                type: string
+                maxLength: 255
+                description: Etat pour filtrer.
+              phone:
+                type: string
+                maxLength: 255
+                description: Numéro de téléphone pour filtrer.
+        - in: query
+          name: sort
+          description: Trier les adresses par colonne spécifiée.
+          schema:
+            type: string
+            enum:
+              - region_id
+              - user_id
+              - address
+              - address1
+              - postcode
+              - city
+              - first_name
+              - last_name
+              - company_name
+              - division
+              - phone
+              - created_at
+              - updated_at
+      responses:
+        200:
+          description: Réponse en cas de succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Address'
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                      next:
+                        type: string
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        401:
+          description: Accès non autorisé
+        403:
+          description: Accès interdit
+        404:
+          description: L'adresse n'a pas été trouvée
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+  /addresses/{id}:
+    put:
+      summary: Mettre à jour une adresse
+      tags:
+        - addresses
+      security:
+        - bearerAuth: [ ]
+      description: Cette route permet de mettre à jour une adresse.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: ID de l'adresse à mettre à jour.
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                address:
+                  type: string
+                  maxLength: 32
+                address1:
+                  type: string
+                  maxLength: 32
+                postcode:
+                  type: string
+                city:
+                  type: string
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                company_name:
+                  type: string
+                phone:
+                  type: string
+                region_id:
+                  type: integer
+      responses:
+        200:
+          description: Réponse en cas de succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Address'
+        401:
+          description: Accès non autorisé
+        403:
+          description: Accès interdit
+        404:
+          description: L'adresse n'a pas été trouvée
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    get:
+      summary: Récupérer les données d'une adresse
+      tags:
+        - addresses
+      security:
+        - bearerAuth: [ ]
+      description: Cette route permet de récupérer une adresse.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: ID de l'adresse à mettre à jour.
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Réponse en cas de succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Address'
+        401:
+          description: Accès non autorisé
+        403:
+          description: Accès interdit
+        404:
+          description: L'adresse n'a pas été trouvée
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    delete:
+      summary: Supprimer une adresse
+      tags:
+        - addresses
+      security:
+        - bearerAuth: [ ]
+      description: Cette route permet de supprimer une adresse.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: ID de l'adresse à mettre à jour.
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Succès
+          content:
+            application/json:
+              example:
+                data:
+                  success: true
+        401:
+          description: Accès non autorisé
+        403:
+          description: Accès interdit
+        404:
+          description: L'adresse n'a pas été trouvée
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+  /customers:
+    get:
+      summary: Liste des utilisateurs
+      tags:
+        - customers
+      security:
+        - bearerAuth: [ ]
+      description: Cette route permet de récupérer une liste d'utilisateurs.
+      parameters:
+        - in: query
+          name: filter
+          description: Filtres pour la liste d'utilisateurs.
+          schema:
+            type: object
+            properties:
+              created_at_before:
+                type: string
+                format: date
+                description: Date de création avant laquelle filtrer.
+              created_at_after:
+                type: string
+                format: date
+                description: Date de création après laquelle filtrer.
+              updated_at_before:
+                type: string
+                format: date
+                description: Date de mise à jour avant laquelle filtrer.
+              updated_at_after:
+                type: string
+                format: date
+                description: Date de mise à jour après laquelle filtrer.
+              uuid:
+                type: string
+                description: UUID de l'utilisateur.
+              id:
+                type: integer
+                description: ID de l'utilisateur.
+              email:
+                type: string
+                description: Adresse e-mail de l'utilisateur.
+              external_id:
+                type: string
+                description: ID externe de l'utilisateur.
+              disabled:
+                type: boolean
+                description: Statut de désactivation de l'utilisateur.
+              referrer:
+                type: string
+                description: Référent de l'utilisateur.
+          example:
+            created_at_before: "2023-01-01"
+            email: "user@example.com"
+        - in: query
+          name: sort
+          description: Trier la liste d'utilisateurs.
+          schema:
+            type: string
+            enum:
+              - id
+              - uuid
+              - email
+              - created_at
+              - updated_at
+            example: id
+      responses:
+        200:
+          description: Réponse en cas de succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserSchema'
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                      next:
+                        type: string
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        401:
+          description: Accès non autorisé
+        403:
+          description: Accès interdit
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    post:
+      summary: Créer un nouvel utilisateur
+      tags:
+        - customers
+      description: Cette route permet de créer un nouveau compte utilisateur. Si l'adresse email existe, la réponse contiendra l'utilisateur associé. Dans le cas contraire, le compte est créé, et le compte créé se trouve dans la réponse.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Adresse e-mail de l'utilisateur
+                  example: user@example.com
+                external_id:
+                  type: string
+                  description: Identifiant externe optionnel à enregistrer
+                  example: some_external_id
+              required:
+                - email
+      responses:
+        200:
+          description: Création réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSchema'
+        401:
+          description: Accès non autorisé
+        403:
+          description: Accès interdit
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+  /customers/{id}:
+    get:
+      summary: Récupérer les détails d'un utilisateur
+      tags:
+        - customers
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: UUID de l'utilisateur
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSchema'
+        401:
+          description: Accès non autorisé
+        403:
+          description: Accès interdit
+        404:
+          description: La ressource n'a pas été trouvée
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+  /transactions:
+    get:
+      summary: Récupérer la liste des transactions
+      tags:
+        - transactions
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: filter
+          in: query
+          description: Filtres pour les transactions (tableau associatif)
+          schema:
+            type: object
+            properties:
+              user_id:
+                type: integer
+                description: ID de l'utilisateur.
+              failure_code:
+                type: string
+                enum:
+                  - authentication_required
+                  - card_decline_rate_limit_exceeded
+                  - card_declined
+                  - card_not_supported
+                  - card_velocity_exceeded
+                  - cvc
+                  - do_not_honor
+                  - exp_month
+                  - expired_card
+                  - fraudulent
+                  - generic_decline
+                  - incorrect_cvc
+                  - incorrect_number
+                  - insufficient_funds
+                  - invalid_account
+                  - invalid_pin
+                  - invalid_request_error
+                  - lost_card
+                  - number
+                  - payment_method
+                  - pickup_card
+                  - processing_error
+                  - reenter_transaction
+                  - restricted_card
+                  - revocation_of_all_authorizations
+                  - revocation_of_authorization
+                  - statement_descriptor
+                  - statement_descriptor_suffix
+                  - stolen_card
+                  - transaction_not_allowed
+                  - try_again_later
+                description: Code d'échec de la transaction.
+              invoice_id:
+                type: integer
+                description: ID de la facture.
+              created_at_before:
+                type: string
+                format: date
+                description: Date de création avant.
+              created_at_after:
+                type: string
+                format: date
+                description: Date de création après.
+              updated_at_before:
+                type: string
+                format: date
+                description: Date de mise à jour avant.
+              updated_at_after:
+                type: string
+                format: date
+                description: Date de mise à jour après.
+              by_customer_uuid:
+                type: string
+                maxLength: 255
+                description: UUID du client.
+              source_id:
+                type: string
+                maxLength: 255
+                description: ID de la source.
+              amount_refunded:
+                type: number
+                description: Montant remboursé.
+              payment_intent_id:
+                type: string
+                maxLength: 255
+                description: ID de l'intention de paiement.
+      responses:
+        200:
+          description: Réponse réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TransactionSchema'
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                      next:
+                        type: string
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        401:
+          description: Accès non autorisé
+        403:
+          description: Accès interdit
+        404:
+          description: La ressource n'a pas été trouvée
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+  /transactions/{transaction_id}:
+    get:
+      summary: Récupérer une transaction par ID
+      tags:
+        - transactions
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: transaction_id
+          in: path
+          required: true
+          description: L'identifiant de la transaction à récupérer.
+          schema:
+            type: string
+      responses:
+        200:
+          description: Réponse réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionSchema'
+        401:
+          description: Accès non autorisé
+        403:
+          description: Accès interdit
+        404:
+          description: La ressource n'a pas été trouvée
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    put:
+      summary: Demander le remboursement d'une transaction par ID
+      tags:
+        - transactions
+      security:
+        - BearerAuth: [ ]
+      parameters:
+          - name: transaction_id
+            in: path
+            required: true
+            description: L'identifiant de la transaction à rembourser.
+            schema:
+              type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  description: Le montant à rembourser (numérique).
+      responses:
+        200:
+          description: Réponse réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionSchema'
+        401:
+          description: Accès non autorisé
+        403:
+          description: Accès interdit
+        404:
+          description: La ressource n'a pas été trouvée
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+  /kpis:
+    get:
+      tags:
+        - kpis
+      security:
+        - bearerAuth: [ ]
+      summary: Récupérer les indicateurs de performance
+      description: Permet de récupérer les indicateurs de performance avec différents filtres.
+      parameters:
+        - name: filter[created_at_before]
+          in: query
+          description: Filtre les KPIs créés avant cette date
+          schema:
+            type: string
+            format: date
+        - name: filter[created_at_after]
+          in: query
+          description: Filtre les KPIs créés après cette date
+          schema:
+            type: string
+            format: date
+        - name: sort
+          in: query
+          description: Tri des résultats (prefix - pour ordre décroissant)
+          schema:
+            type: string
+            enum: [created_at, -created_at]
+      responses:
+        200:
+          description: Liste des KPIs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        users_subscribed:
+                          type: integer
+                          description: Nombre d'utilisateurs inscrits à la date donnée
+                        subscriptions:
+                          type: integer
+                          description: Nombre d'abonnements créés à la date donnée
+                        sum_subscriptions:
+                          type: integer
+                          description: Montant total des abonnements créés à la date donnée (en centimes)
+                        purchases:
+                          type: integer
+                          description: Nombre d'achats uniques (hors abonnements) à la date donnée
+                        sum_purchases:
+                          type: integer
+                          description: Montant total des achats uniques à la date donnée (en centimes)
+                        subscriptions_paused:
+                          type: integer
+                          description: Nombre d'abonnements mis en pause
+                        subscriptions_restarted:
+                          type: integer
+                          description: Nombre d'abonnements réactivés
+                        subscription_grace_total:
+                          type: integer
+                          description: Nombre total d'abonnements en période de grâce
+                        subscription_grace_ending:
+                          type: integer
+                          description: Nombre d'abonnements dont la période de grâce se termine
+                        lives:
+                          type: integer
+                          description: Nombre d'abonnements actifs
+                        active_expired:
+                          type: integer
+                          description: Nombre d'abonnements actifs mais expirés
+                        source_updated_count:
+                          type: integer
+                          description: Nombre de mises à jour de source
+                        voided_unsub_voucher_count:
+                          type: integer
+                          description: Nombre de bons annulés pour désabonnement
+                        voided_unsub_postpone_count:
+                          type: integer
+                          description: Nombre de reports annulés pour désabonnement
+                        amount_utm:
+                          type: integer
+                          description: Montant des achats via UTM (en centimes)
+                        amount_referral:
+                          type: integer
+                          description: Montant des achats via parrainage (en centimes)
+                        amount_regain:
+                          type: integer
+                          description: Montant des achats via récupération (en centimes)
+                        amount_retry:
+                          type: integer
+                          description: Montant des achats via nouvelle tentative (en centimes)
+                        amount_renew:
+                          type: integer
+                          description: Montant des renouvellements (en centimes)
+                        amount_backend:
+                          type: integer
+                          description: Montant des achats via backend (en centimes)
+                        amount_unsub_voucher:
+                          type: integer
+                          description: Montant des bons de désabonnement (en centimes)
+                        amount_unsub_postpone:
+                          type: integer
+                          description: Montant des reports de désabonnement (en centimes)
+                        amount_reactivation_offer:
+                          type: integer
+                          description: Montant des offres de réactivation (en centimes)
+                        count_utm:
+                          type: integer
+                          description: Nombre d'achats via UTM
+                        count_referral:
+                          type: integer
+                          description: Nombre d'achats via parrainage
+                        count_regain:
+                          type: integer
+                          description: Nombre d'achats via récupération
+                        count_retry:
+                          type: integer
+                          description: Nombre d'achats via nouvelle tentative
+                        count_renew:
+                          type: integer
+                          description: Nombre de renouvellements
+                        count_backend:
+                          type: integer
+                          description: Nombre d'achats via backend
+                        count_unsub_voucher:
+                          type: integer
+                          description: Nombre de bons de désabonnement
+                        count_unsub_postpone:
+                          type: integer
+                          description: Nombre de reports de désabonnement
+                        count_reactivation_offer:
+                          type: integer
+                          description: Nombre d'offres de réactivation
+                        count_followup:
+                          type: integer
+                          description: Nombre de suivis
+                        amount_followup:
+                          type: integer
+                          description: Montant des suivis (en centimes)
+                        amount_renew_failed:
+                          type: integer
+                          description: Montant des renouvellements échoués (en centimes)
+                        count_renew_failed:
+                          type: integer
+                          description: Nombre de renouvellements échoués
+                        created_at:
+                          type: string
+                          format: date-time
+                          description: Date de création
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                      last:
+                        type: string
+                      prev:
+                        type: string
+                      next:
+                        type: string
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        401:
+          description: Accès non autorisé
+        403:
+          description: Accès interdit
+        404:
+          description: La ressource n'a pas été trouvée
+        422:
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Utilisez un jeton d'authentification pour accéder à cette ressource
+  schemas:
+    TransactionSchema:
+      type: object
+      properties:
+        order_id:
+          type: integer
+          description: L'identifiant de la commande.
+        order:
+          $ref: '#/components/schemas/OrderSchema'
+        gateway:
+          type: string
+          description: La passerelle de paiement utilisée.
+        transaction_id:
+          type: string
+          description: L'identifiant de la transaction.
+        detail:
+          type: string
+          description: Détails de la transaction.
+        token:
+          type: string
+          description: Le jeton de la transaction.
+        tenant_id:
+          type: integer
+          description: L'identifiant du locataire.
+        paid:
+          type: boolean
+          description: Indique si la transaction a été payée.
+        amount:
+          type: string
+          description: Le montant de la transaction.
+        refunded:
+          type: boolean
+          description: Indique si la transaction a été remboursée.
+        source_id:
+          type: string
+          description: L'identifiant de la source.
+        failure_message:
+          type: string
+          description: Message d'échec de la transaction.
+        failure_code:
+          type: string
+          description: Code d'échec de la transaction.
+        invoice_id:
+          type: integer
+          description: L'identifiant de la facture associée à la transaction.
+        amount_refunded:
+          type: string
+          description: Montant remboursé de la transaction.
+        statement_descriptor:
+          type: string
+          description: Description de l'état de compte.
+        user_id:
+          type: integer
+          description: L'identifiant de l'utilisateur associé à la transaction.
+        created_at:
+          type: string
+          format: date-time
+          description: Date et heure de création de la transaction.
+        updated_at:
+          type: string
+          format: date-time
+          description: Date et heure de mise à jour de la transaction.
+        payment_intent_id:
+          type: string
+          description: L'identifiant de l'intention de paiement associée à la transaction.
+    DeliverySchema:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID du bon de livraison.
+        uuid:
+          type: string
+          description: UUID du bon de livraison.
+        address:
+          $ref: '#/components/schemas/Address'
+          description: Informations sur l'adresse de livraison.
+        transporter:
+          $ref: '#/components/schemas/Transporter'
+          description: Informations sur le transporteur.
+        created_at:
+          type: string
+          format: date-time
+          description: Date de création du bon de livraison.
+        scheduled_at:
+          type: string
+          format: date-time
+          description: Date prévue de livraison.
+        tracking_link:
+          type: string
+          description: Lien de suivi.
+        subscription_uuid:
+          type: string
+          description: UUID de la souscription associée.
+        address_id:
+          type: integer
+          description: ID de l'adresse.
+        phone:
+          type: string
+          description: Numéro de téléphone.
+        status:
+          type: string
+          description: Statut du bon de livraison.
+          enum:
+            - created
+            - pending
+            - shipped
+            - delivered
+            - scheduled
+            - canceled
+        tracking_number:
+          type: string
+          description: Numéro de suivi du transporteur.
+        customer_id:
+          type: string
+          description: ID du client.
+        supply_transporter_reference:
+          type: string
+          description: ID de la fourniture.
+        first_name:
+          type: string
+          description: Prénom du destinataire.
+        last_name:
+          type: string
+          description: Nom de famille du destinataire.
+        postcode:
+          type: string
+          description: Code postal de l'adresse de livraison.
+        address1:
+          type: string
+          description: Adresse ligne 1.
+        address2:
+          type: string
+          description: Adresse ligne 2.
+        division:
+          type: string
+          description: Etat.
+        city:
+          type: string
+          description: Ville de l'adresse de livraison.
+        country:
+          type: string
+          description: Pays de l'adresse de livraison.
+        mail:
+          type: string
+          description: Adresse e-mail du destinataire.
+        subscriptions_count:
+          type: string
+          description: Nombre total de souscriptions pour l'abonné.
+        transporter_name:
+          type: string
+          description: Nom du transporteur.
+        shipped_count:
+          type: string
+          description: Nombre de livraisons expédiées.
+        site_name:
+          type: string
+          description: Nom du site associé.
+        options:
+          type: string
+          description: Options spécifiques au bon de livraison.
+        iso_code:
+          type: string
+          description: Code ISO du pays.
+        relay:
+          type: string
+          description: Relais de livraison.
+        relay_id:
+          type: integer
+          description: ID du relais de livraison.
+        orderable_name:
+          type: string
+          description: Nom de l'élément commandable.
+        orderable_id:
+          type: string
+          description: ID de l'élément commandable.
+        orderable_type:
+          type: string
+          description: Type de l'élément commandable.
+          enum:
+            - App\Product
+            - App\AddonPlan
+            - App\Plan
+        order_id:
+          type: integer
+          description: ID de la commande associée.
+        ref:
+          type: string
+          description: Référence du produit dans le BL au moment de la commande.
+    WebsiteEntity:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            id:
+              type: integer
+              description: L'identifiant unique de l'entité "Website".
+            name:
+              type: string
+              description: Le nom de l'entité "Website".
+            host:
+              type: string
+              description: Le nom de domaine du site.
+            paymentMethods:
+              type: array
+              items:
+                $ref: "#/components/schemas/PaymentMethodEntity"
+              description: Les méthodes de paiement associées à l'entité "Website".
+            webhooks:
+              type: object
+              description : Liste des évènements actifs et url correspondante
+              additionalProperties:
+                type: string
+            metadata:
+              type: object
+              additionalProperties:
+                type: string
+
+    PaymentMethodEntity:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: L'identifiant unique de la méthode de paiement.
+        name:
+          type: object
+          properties:
+            fr:
+              type: string
+              description: Le nom de la méthode de paiement en français.
+        description:
+          type: object
+          properties:
+            fr:
+              type: string
+              description: La description de la méthode de paiement en français.
+        class_key:
+          type: string
+          description: La clé de classe associée à la méthode de paiement.
+        gateway_id:
+          type: integer
+          description: L'identifiant de la passerelle de paiement associée à la méthode de paiement.
+        created_at:
+          type: string
+          description: La date de création de la méthode de paiement au format ISO 8601.
+        updated_at:
+          type: string
+          description: La date de mise à jour de la méthode de paiement au format ISO 8601.
+        deleted_at:
+          type: string
+          description: La date de suppression de la méthode de paiement au format ISO 8601 ou la valeur nulle si la méthode n'a pas été supprimée.
+        checkout_manager:
+          type: string
+          description: Le gestionnaire de paiement associé à la méthode de paiement.
+        need_payable:
+          type: boolean
+          description: Indique si la méthode de paiement nécessite un élément payable.
+        pivot:
+          type: object
+          properties:
+            tenant_id:
+              type: integer
+              description: L'identifiant du locataire.
+            payment_method_id:
+              type: integer
+              description: L'identifiant de la méthode de paiement.
+            created_at:
+              type: string
+              description: La date de création de la liaison au format ISO 8601.
+            updated_at:
+              type: string
+              description: La date de mise à jour de la liaison au format ISO 8601
+    ProductEntityUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          maxLength: 255
+        position:
+          type: integer
+        short_description:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 255
+        meta_title:
+          type: string
+          maxLength: 255
+        meta_description:
+          type: string
+          maxLength: 255
+        id_category:
+          type: integer
+        quantity:
+          type: integer
+        price:
+          type: number
+        tax:
+          type: number
+          enum:
+            - 0
+            - 0.2
+            - 0.055
+            - 0.1
+            - 0.021
+            - 0.21
+            - 0.06
+        active:
+          type: boolean
+        virtual_product:
+          type: boolean
+        salable:
+          type: boolean
+        gift_card:
+          type: boolean
+        gift_plan:
+          type: string
+        disable_seo:
+          type: boolean
+        ref:
+          type: string
+        external_id:
+          type: string
+        frequencies:
+          type: array
+          items:
+            type: object
+            properties:
+              interval:
+                type: string
+                enum:
+                  - month
+                  - week
+                  - day
+              interval_count:
+                type: integer
+                minimum: 1
+                maximum: 3
+      example:
+        ref: "REFABOPRODUIT"
+        name: "Super nom produit"
+        slug: "slug-de-rpoduit"
+        price: "17.50"
+        description: "Petite description produit"
+        tax: "0.2"
+        frequencies:
+          - interval: "month"
+            interval_count: 2
+    ProductEntityCreation:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          maxLength: 255
+        position:
+          type: integer
+        short_description:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 255
+        meta_title:
+          type: string
+          maxLength: 255
+        meta_description:
+          type: string
+          maxLength: 255
+        id_category:
+          type: integer
+        quantity:
+          type: integer
+        price:
+          type: number
+        tax:
+          type: number
+          enum:
+            - 0
+            - 0.2
+            - 0.055
+            - 0.1
+            - 0.021
+            - 0.21
+            - 0.06
+        active:
+          type: boolean
+        virtual_product:
+          type: boolean
+        salable:
+          type: boolean
+        gift_card:
+          type: boolean
+        gift_plan:
+          type: string
+        disable_seo:
+          type: boolean
+        ref:
+          type: string
+        external_id:
+          type: string
+        frequencies:
+          type: array
+          items:
+            type: object
+            properties:
+              interval:
+                type: string
+                enum:
+                  - month
+                  - week
+                  - day
+              interval_count:
+                type: integer
+                minimum: 1
+                maximum: 3
+      required:
+        - name
+        - ref
+        - price
+        - tax
+        - description
+      example:
+        ref: "REFABOPRODUIT"
+        name: "Super nom produit"
+        slug: "slug-de-rpoduit"
+        price: "17.50"
+        description: "Petite description produit"
+        tax: "0.2"
+        frequencies:
+          - interval: "month"
+            interval_count: 2
+    ProductEntity:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        name:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          maxLength: 255
+        position:
+          type: integer
+        short_description:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 255
+        meta_title:
+          type: string
+          maxLength: 255
+        meta_description:
+          type: string
+          maxLength: 255
+        id_category:
+          type: integer
+        quantity:
+          type: integer
+        price:
+          type: number
+        tax:
+          type: number
+          enum:
+            - 0
+            - 0.2
+            - 0.055
+            - 0.1
+            - 0.021
+            - 0.21
+            - 0.06
+        active:
+          type: boolean
+        virtual_product:
+          type: boolean
+        salable:
+          type: boolean
+        gift_card:
+          type: boolean
+        gift_plan:
+          type: string
+        disable_seo:
+          type: boolean
+        ref:
+          type: string
+        external_id:
+          type: string
+        offers:
+          type: array
+          items:
+            $ref: "#/components/schemas/OfferEntity"
+        frequences:
+          type: array
+          items:
+            $ref: "#/components/schemas/FrequenceEntity"
+
+    OfferEntity:
+      type: object
+      properties:
+        id:
+          type: integer
+        quantity:
+          type: integer
+        percent_off:
+          type: number
+        price:
+          type: number
+        active:
+          type: boolean
+        product_id:
+          type: integer
+        deleted_at:
+          type: string
+        tenant_id:
+          type: integer
+
+    FrequenceEntity:
+      type: object
+      properties:
+        id:
+          type: integer
+        interval:
+          type: string
+        interval_count:
+          type: integer
+        tenant_id:
+          type: integer
+        pivot:
+          type: object
+          properties:
+            product_id:
+              type: integer
+            composable_frequence_id:
+              type: integer
+
+    PaginationMeta:
+      type: object
+      properties:
+        current_page:
+          type: integer
+        from:
+          type: integer
+        last_page:
+          type: integer
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+              label:
+                type: string
+              active:
+                type: boolean
+        path:
+          type: string
+        per_page:
+          type: integer
+        to:
+          type: integer
+        total:
+          type: integer
+    ValidationError:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Message d'erreur
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: Détails des erreurs de validation
+    Address:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: L'ID de l'adresse.
+        user_id:
+          type: integer
+          description: L'ID de l'utilisateur auquel appartient cette adresse.
+        company_name:
+          type: string
+          description: Nom de la société
+        address:
+          type: string
+          description: L'adresse physique.
+        address1:
+          type: string
+          description: Complément d'adresse.
+        postcode:
+          type: string
+          description: Code postal de l'adresse.
+        city:
+          type: string
+          description: Ville de l'adresse.
+        phone:
+          type: string
+          description: Numéro de téléphone associé à l'adresse.
+        first_name:
+          type: string
+          description: Prénom du destinataire de l'adresse.
+        last_name:
+          type: string
+          description: Nom du destinataire de l'adresse.
+        region_id:
+          type: integer
+          description: L'ID de la région de l'adresse.
+        division:
+          type: string
+          description: Division associée à l'adresse.
+        division_name:
+          type: string
+          description: Nom de la division associée à l'adresse.
+        external_id:
+          type: string
+          description: Correspondance sur service tiers.
+        deletable:
+          type: boolean
+          description: Indique si l'adresse peut être supprimée.
+        country:
+          type: object
+          properties:
+            id:
+              type: integer
+              description: L'ID du pays.
+            name:
+              type: string
+              description: Nom du pays.
+            alphaCode:
+              type: string
+              description: Code alpha du pays.
+
+    Transporter:
+      type: string
+      description: Transporteur associé à l'abonnement.
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: L'ID de l'utilisateur.
+        email:
+          type: string
+          description: Adresse e-mail de l'utilisateur.
+        uuid:
+          type: string
+          description: UUID de l'utilisateur.
+        refp:
+          type: string
+          description: Référence du parcours de l'utilisateur.
+        can_void_with_coupon:
+          type: boolean
+          description: Indique si l'utilisateur peut annuler avec un coupon.
+        has_active_subscription:
+          type: boolean
+          description: Indique si l'utilisateur a un abonnement actif.
+        info:
+          type: object
+          properties:
+            credits:
+              type: string
+              description: Crédits associés à l'utilisateur.
+    Plan:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: L'ID du plan d'abonnement.
+        uuid:
+          type: string
+          description: UUID du plan d'abonnement.
+        name:
+          type: string
+          description: Nom du plan d'abonnement.
+        short_name:
+          type: string
+          description: Nom court du plan d'abonnement.
+        more:
+          type: string
+          description: Description détaillée du plan.
+        image:
+          type: string
+          description: URL de l'image du plan.
+        start_at:
+          type: string
+          format: date-time
+          description: Date de début du plan.
+        price:
+          type: number
+          description: Prix du plan.
+        tax:
+          type: number
+          description: Taux de taxe applicable au plan.
+        interval:
+          type: string
+          description: Intervalle de facturation du plan.
+        interval_count:
+          type: integer
+          description: Nombre d'intervalle pour la facturation.
+        shipped_count:
+          type: integer
+          description: Nombre de livraisons effectuées.
+        position:
+          type: integer
+          description: Position du plan.
+        engaged_interval:
+          type: string
+          description: Intervalle d'engagement du plan.
+        engaged:
+          type: boolean
+          description: Indique si le plan est engagé.
+        active:
+          type: boolean
+          description: Indique si le plan est actif.
+    SubscriptionEntity:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: L'ID de l'abonnement.
+        uuid:
+          type: string
+          description: UUID de l'abonnement.
+        created_at:
+          type: string
+          format: date-time
+          description: Date de création de l'abonnement.
+        end_date:
+          type: string
+          format: date-time
+          description: Date de fin de l'abonnement.
+        engaged_date:
+          type: string
+          format: date-time
+          description: Date d'engagement de l'abonnement.
+        auto_pause_at:
+          type: string
+          format: date-time
+          description: Date de mise en pause automatique de l'abonnement.
+        start_date:
+          type: string
+          format: date-time
+          description: Date de début de l'abonnement.
+        active:
+          type: boolean
+          description: Indique si l'abonnement est actif.
+        paused:
+          type: boolean
+          description: Indique si l'abonnement est en pause.
+        next_billing:
+          type: string
+          format: date-time
+          description: Date de la prochaine facturation de l'abonnement.
+        update_transporter_at:
+          type: string
+          format: date-time
+          description: Date de mise à jour du transporteur.
+        relay:
+          type: string
+          description: Relais associé à l'abonnement.
+        graceMonths:
+          type: string
+          description: Mois de grâce pour l'abonnement.
+#        customerRevenue:
+#          type: string
+#          description: Revenu du client pour l'abonnement.
+#        customerRefund:
+#          type: string
+#          description: Montant remboursé au client.
+#        totalTransactionsSuccess:
+#          type: integer
+#          description: Nombre total de transactions réussies.
+#        subTransactionsSuccess:
+#          type: integer
+#          description: Nombre de transactions réussies pour l'abonnement.
+#        countTransactions:
+#          type: integer
+#          description: Nombre total de transactions.
+#        customization_products:
+#          type: array
+#          description: Liste des produits de personnalisation associés à l'abonnement.
+        retry_link:
+          type: string
+          description: Lien de réessai.
+        interval:
+          type: string
+          description: Intervalle de facturation de l'abonnement.
+        interval_count:
+          type: integer
+          description: Nombre d'intervalle pour la facturation de l'abonnement.
+        switch_plan_uuid:
+          type: string
+          description: UUID du plan de changement.
+        switch_plan_date:
+          type: string
+          format: date-time
+          description: Date de changement de plan.
+        referrer:
+          type: string
+          description: Source d'acquisition.
+        address:
+          $ref: "#/components/schemas/Address"
+          description: Adresse de livraison de l'abonnement.
+        user_uuid:
+          type: string
+          description: uuid de l'utilisateur.
+        user_id:
+          type: string
+          description: id de l'utilisateur.
+        email:
+          type: string
+          description: email de l'utilisateur.
+        display_interval:
+          type: string
+          description: Intervalle d'affichage de l'abonnement.
+        display_content:
+          type: string
+          description: Contenu de l'abonnement sous forme de texte.
+        external_fingerprint:
+          type: string
+          description: Emprinte de l'abonnement.
+        content:
+          type: array
+          description: Contenu détaillé de l'abonnement.
+          items:
+            type: object
+            properties:
+              external_id:
+                type: string
+                description: Identifiant externe du produit.
+              quantity:
+                type: integer
+                description: Quantité du produit.
+              product_id:
+                type: integer
+                description: Identifiant du produit.
+              subscription_id:
+                type: integer
+                description: Identifiant de l'abonnement.
+    OrderSchema:
+      description: Schéma de données pour une commande
+      type: object
+      properties:
+        order_id:
+          description: ID de la commande
+          type: integer
+        user_id:
+          description: ID de l'utilisateur
+          type: integer
+        user_uuid:
+          description: UUID de l'utilisateur
+          type: string
+          format: uuid
+        first_name:
+          description: Prénom de l'utilisateur
+          type: string
+        last_name:
+          description: Nom de l'utilisateur
+          type: string
+        phone:
+          description: Numéro de téléphone de l'utilisateur
+          type: string
+        email:
+          description: Adresse e-mail de l'utilisateur
+          type: string
+        status:
+          description: Statut de la commande
+          type: string
+        created:
+          description: Date de création de la commande
+          type: string
+          format: date-time
+        items:
+          description: Liste des articles de la commande
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                description: ID de l'article
+                type: integer
+              price:
+                description: Prix HT de l'article
+                type: number
+              tax:
+                description: Taux de TVA applicable
+                type: string
+              quantity:
+                description: Quantité de l'article commandée
+                type: integer
+              name:
+                description: Nom de l'article
+                type: string
+              type:
+                description: Type de l'article (par exemple, produit ou plan)
+                type: string
+              external_id:
+                description: id du vendor connecté (id declinaison pour prestashop)
+                type: string
+              ref:
+                description: Reference de l'article
+                type: string
+
+        shipping:
+          description: Frais de livraison
+          type: string
+        count:
+          description: Nombre total d'articles dans la commande
+          type: integer
+        total_tax_paid:
+          description: Montant total des taxes payées
+          type: string
+        total_discount_inc:
+          description: Montant total de la remise incluse
+          type: string
+        total_paid:
+          description: Montant total payé
+          type: string
+        total_shipping_paid:
+          description: Frais de livraison totaux payés
+          type: string
+        created_at:
+          description: Date et heure de création de la commande
+          type: string
+          format: date-time
+        coupon:
+          description: Liste de coupons appliqués à la commande
+          type: array
+        subscription_uuid:
+          description: UUID de l'abonnement associé (le cas échéant)
+          type: string
+        next_try:
+          description: Prochaine tentative (le cas échéant)
+          type: string
+          format: date-time
+        paid_transaction_id:
+          description: id transaction payée
+          type: string
+        paid_class_key:
+          description: driver de paiement
+          type: string
+    UserSchema:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID de l'utilisateur.
+        email:
+          type: string
+          format: email
+          description: Adresse e-mail de l'utilisateur.
+        uuid:
+          type: string
+          format: uuid
+          description: UUID de l'utilisateur.
+        refp:
+          type: string
+          description: Référence P de l'utilisateur.
+        can_void_with_coupon:
+          type: boolean
+          description: Indique si l'utilisateur peut annuler avec un coupon.
+        has_active_subscription:
+          type: boolean
+          description: Indique si l'utilisateur a un abonnement actif.
+#        info:
+#          type: null
+#          description: Information sur l'utilisateur.
+        external_id:
+          type: string
+          description: ID externe de l'utilisateur.
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+          description: Liste des adresses de l'utilisateur.
+        customerRevenue:
+          type: string
+          description: Revenu du client.
+        customerRefund:
+          type: string
+          description: Remboursement du client.
+        totalTransactionsSuccess:
+          type: integer
+          description: Total des transactions réussies.

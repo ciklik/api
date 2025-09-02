@@ -1,0 +1,43 @@
+# This file instructs Redocly's linter to ignore the rules contained for specific parts of your API.
+# See https://redocly.com/docs/cli/ for more information.
+openapi.yaml:
+  info-license:
+    - '#/info'
+  operation-operationId:
+    - '#/paths/~1whoiam/get/operationId'
+    - '#/paths/~1whoiam/put/operationId'
+    - '#/paths/~1products/get/operationId'
+    - '#/paths/~1products/post/operationId'
+    - '#/paths/~1products~1{ref}/get/operationId'
+    - '#/paths/~1products~1{ref}/patch/operationId'
+    - '#/paths/~1webhooks/get/operationId'
+    - '#/paths/~1webhooks/post/operationId'
+    - '#/paths/~1webhooks/delete/operationId'
+    - '#/paths/~1subscriptions~1{id}/get/operationId'
+    - '#/paths/~1subscriptions~1{id}/put/operationId'
+    - '#/paths/~1subscriptions/get/operationId'
+    - '#/paths/~1delivery/get/operationId'
+    - '#/paths/~1delivery~1{id}/get/operationId'
+    - '#/paths/~1delivery~1{id}/put/operationId'
+    - '#/paths/~1delivery~1{id}/delete/operationId'
+    - '#/paths/~1orders/get/operationId'
+    - '#/paths/~1orders~1{id}/get/operationId'
+    - '#/paths/~1addresses/get/operationId'
+    - '#/paths/~1addresses~1{id}/get/operationId'
+    - '#/paths/~1addresses~1{id}/put/operationId'
+    - '#/paths/~1addresses~1{id}/delete/operationId'
+    - '#/paths/~1customers/get/operationId'
+    - '#/paths/~1customers/post/operationId'
+    - '#/paths/~1customers~1{id}/get/operationId'
+    - '#/paths/~1transactions/get/operationId'
+    - '#/paths/~1transactions~1{transaction_id}/get/operationId'
+    - '#/paths/~1transactions~1{transaction_id}/put/operationId'
+    - '#/paths/~1kpis/get/operationId'
+  operation-parameters-unique:
+    - '#/paths/~1delivery/get/parameters/7'
+  no-unused-components:
+    - '#/components/schemas/User'
+    - '#/components/schemas/Plan'
+  security-defined:
+    - '#/paths/~1transactions~1{transaction_id}/get/security/0/BearerAuth'
+    - '#/paths/~1transactions~1{transaction_id}/put/security/0/BearerAuth'
