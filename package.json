@@ -11,7 +11,7 @@
     "serve": "npx http-server dist -p 8080 -c-1"
   },
   "devDependencies": {
-    "@redocly/cli": "^1.16.0",
+    "@redocly/cli": "^1.34.5",
     "http-server": "^14.1.1"
   }
 }
