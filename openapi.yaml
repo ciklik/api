@@ -106,36 +106,43 @@ paths:
           description: Filtrer par ID du produit
           schema:
             type: integer
+          example: 1
         - name: filter[name]
           in: query
           description: Filtrer par nom du produit
           schema:
             type: string
+          example: "Produit exemple"
         - name: filter[id_category]
           in: query
           description: Filtrer par ID de catégorie
           schema:
             type: integer
+          example: 5
         - name: filter[quantity]
           in: query
           description: Filtrer par quantité
           schema:
             type: integer
+          example: 10
         - name: filter[price]
           in: query
           description: Filtrer par prix
           schema:
             type: number
+          example: 29.99
         - name: filter[active]
           in: query
           description: Filtrer par état d'activité
           schema:
             type: boolean
+          example: true
         - name: filter[slug]
           in: query
           description: Filtrer par slug
           schema:
             type: string
+          example: "produit-exemple"
         - name: filter[virtual_product]
           in: query
           description: Filtrer par produit virtuel
@@ -590,6 +597,19 @@ paths:
                       quantity: 1
                       interval: month
                       interval_count: 1
+                metadata:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: |
+                    Métadonnées personnalisées pour l'abonnement. 
+                    Les clés commençant par "ciklik_encrypted_" seront automatiquement encryptées.
+            example:
+              active: true
+              metadata:
+                key1: "value1"
+                key2: "value2"
+                ciklik_encrypted_key2: "value-encrypted"
 
       responses:
         200:
@@ -639,88 +659,103 @@ paths:
           schema:
             type: string
             format: date
+          example: "2023-01-01"
         - name: filter[created_at_after]
           in: query
           description: Filtre par date de création après la date spécifiée.
           schema:
             type: string
             format: date
+          example: "2023-01-01"
         - name: filter[canceled_since_before]
           in: query
           description: Filtre par date d'annulation avant la date spécifiée.
           schema:
             type: string
             format: date
+          example: "2023-01-01"
         - name: filter[canceled_since_after]
           in: query
           description: Filtre par date d'annulation après la date spécifiée.
           schema:
             type: string
             format: date
+          example: "2023-01-01"
         - name: filter[expired]
           in: query
           description: Filtre par abonnements expirés.
           schema:
             type: boolean
+          example: false
         - name: filter[in_grace_period]
           in: query
           description: Filtre par abonnements en période de grâce.
           schema:
             type: boolean
+          example: false
         - name: filter[engaged_before]
           in: query
           description: Filtre par date d'engagement avant la date spécifiée.
           schema:
             type: string
             format: date
+          example: "2023-01-01"
         - name: filter[engaged_after]
           in: query
           description: Filtre par date d'engagement après la date spécifiée.
           schema:
             type: string
             format: date
+          example: "2023-01-01"
         - name: filter[next_billing_before]
           in: query
           description: Filtre par date de prochaine facturation avant la date spécifiée.
           schema:
             type: string
             format: date
+          example: "2023-01-01"
         - name: filter[next_billing_after]
           in: query
           description: Filtre par date de prochaine facturation après la date spécifiée.
           schema:
             type: string
             format: date
+          example: "2023-01-01"
         - name: filter[end_date_before]
           in: query
           description: Filtre par date de fin d'abonnement avant la date spécifiée.
           schema:
             type: string
             format: date
+          example: "2023-01-01"
         - name: filter[end_date_after]
           in: query
           description: Filtre par date de fin d'abonnement après la date spécifiée.
           schema:
             type: string
             format: date
+          example: "2023-01-01"
         - name: filter[subscriptions_by_email]
           in: query
           description: Filtre par adresse e-mail.
           schema:
             type: string
             format: email
+          example: "user@example.com"
         - name: filter[plan_id]
           in: query
           description: Filtre par ID de plan.
           schema:
             type: string
             maxLength: 255
+          example: "plan_123"
         - name: filter[customer_id]
           in: query
           description: Filtre par ID de client.
           schema:
             type: string
             maxLength: 255
+          example: "550e8400-e29b-41d4-a716-446655440000"
         - name: sort
           in: query
           description: Options de tri.
@@ -782,7 +817,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ValidationError"
-  /delivery:
+  /deliveries:
     get:
       summary: Liste des bons de livraison
       tags:
@@ -824,11 +859,6 @@ paths:
         - name: filter[transporter_reference]
           in: query
           description: Filtrer par référence du transporteur.
-          schema:
-            type: string
-        - name: filter[transporter_reference]
-          in: query
-          description: Filtrer par référence transporteur.
           schema:
             type: string
         - name: filter[transporter_id]
@@ -1057,7 +1087,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ValidationError"
-  /delivery/{id}:
+  /deliveries/{id}:
     get:
       summary: Liste détails d'un bon de livraison
       tags:
@@ -1189,29 +1219,33 @@ paths:
         - bearerAuth: [ ]
       summary: Récupérer la liste des commandes
       parameters:
-        - in: query
-          name: user_id
-          description: ID de l'utilisateur
+        - name: filter[user_id]
+          in: query
+          description: Filtrer par ID de l'utilisateur
           schema:
             type: integer
-        - in: query
-          name: address_id
-          description: ID de l'adresse
+          example: 123
+        - name: filter[address_id]
+          in: query
+          description: Filtrer par ID de l'adresse
           schema:
             type: integer
-        - in: query
-          name: invoice_address_id
-          description: ID de l'adresse de facturation
+          example: 456
+        - name: filter[invoice_address_id]
+          in: query
+          description: Filtrer par ID de l'adresse de facturation
           schema:
             type: integer
-        - in: query
-          name: transporter_id
-          description: ID du transporteur
+          example: 789
+        - name: filter[transporter_id]
+          in: query
+          description: Filtrer par ID du transporteur
           schema:
             type: integer
-        - in: query
-          name: status
-          description: Statut de la commande
+          example: 10
+        - name: filter[status]
+          in: query
+          description: Filtrer par statut de la commande
           schema:
             type: string
             enum:
@@ -1222,73 +1256,85 @@ paths:
               - in_process
               - pending
               - need_action
-        - in: query
-          name: subscription_uuid
-          description: UUID de l'abonnement
+          example: "pending"
+        - name: filter[subscription_uuid]
+          in: query
+          description: Filtrer par UUID de l'abonnement
           schema:
             type: string
             maxLength: 255
-        - in: query
-          name: invoice_id
-          description: ID de la facture
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: filter[invoice_id]
+          in: query
+          description: Filtrer par ID de la facture
           schema:
             type: integer
-        - in: query
-          name: total_paid
-          description: Montant total payé
+          example: 100
+        - name: filter[total_paid]
+          in: query
+          description: Filtrer par montant total payé
           schema:
             type: number
-        - in: query
-          name: next_try
-          description: Prochaine tentative
+          example: 29.99
+        - name: filter[next_try]
+          in: query
+          description: Filtrer par prochaine tentative
           schema:
             type: string
             format: date
-        - in: query
-          name: created_at_before
-          description: Date de création avant
+          example: "2023-01-01"
+        - name: filter[created_at_before]
+          in: query
+          description: Filtrer par date de création avant
           schema:
             type: string
             format: date
-        - in: query
-          name: created_at_after
-          description: Date de création après
+          example: "2023-01-01"
+        - name: filter[created_at_after]
+          in: query
+          description: Filtrer par date de création après
           schema:
             type: string
             format: date
-        - in: query
-          name: updated_at_before
-          description: Date de mise à jour avant
+          example: "2023-01-01"
+        - name: filter[updated_at_before]
+          in: query
+          description: Filtrer par date de mise à jour avant
           schema:
             type: string
             format: date
-        - in: query
-          name: updated_at_after
-          description: Date de mise à jour après
+          example: "2023-01-01"
+        - name: filter[updated_at_after]
+          in: query
+          description: Filtrer par date de mise à jour après
           schema:
             type: string
             format: date
-        - in: query
-          name: next_try_before
-          description: Prochaine tentative avant
+          example: "2023-01-01"
+        - name: filter[next_try_before]
+          in: query
+          description: Filtrer par prochaine tentative avant
           schema:
             type: string
             format: date
-        - in: query
-          name: next_try_after
-          description: Prochaine tentative après
+          example: "2023-01-01"
+        - name: filter[next_try_after]
+          in: query
+          description: Filtrer par prochaine tentative après
           schema:
             type: string
             format: date
-        - in: query
-          name: by_customer_uuid
-          description: UUID du client
+          example: "2023-01-01"
+        - name: filter[by_customer_uuid]
+          in: query
+          description: Filtrer par UUID du client
           schema:
             type: string
             maxLength: 255
-        - in: query
-          name: source
-          description: Source de la commande
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: filter[source]
+          in: query
+          description: Filtrer par source de la commande
           schema:
             type: string
             enum:
@@ -1302,6 +1348,7 @@ paths:
               - unsub_postpone
               - reactivation_offer
               - followup
+          example: "utm"
         - in: query
           name: sort
           description: Champ de tri
@@ -1320,11 +1367,12 @@ paths:
               - source
               - created_at
               - updated_at
-        - in: query
-          name: prestashop_order_id
-          description: Correspondance commande prestasop
+        - name: filter[prestashop_order_id]
+          in: query
+          description: Filtrer par correspondance commande prestasop
           schema:
             type: integer
+          example: 500
       responses:
         200:
           description: Succès
@@ -1406,74 +1454,116 @@ paths:
         - bearerAuth: [ ]
       description: Cette route permet de lister des adresses.
       parameters:
-        - in: query
-          name: filter
-          description: Filtres pour la liste d'adresses
+        - name: filter[created_at_before]
+          in: query
+          description: Date de création avant laquelle filtrer.
           schema:
-            type: object
-            properties:
-              created_at_before:
-                type: string
-                format: date
-                description: Date de création avant laquelle filtrer.
-              created_at_after:
-                type: string
-                format: date
-                description: Date de création après laquelle filtrer.
-              updated_at_before:
-                type: string
-                format: date
-                description: Date de mise à jour avant laquelle filtrer.
-              updated_at_after:
-                type: string
-                format: date
-                description: Date de mise à jour après laquelle filtrer.
-              by_customer_uuid:
-                type: string
-                maxLength: 255
-                description: UUID du client pour filtrer.
-              region_id:
-                type: integer
-                description: ID de la région pour filtrer.
-              user_id:
-                type: integer
-                description: ID de l'utilisateur pour filtrer.
-              address:
-                type: string
-                maxLength: 32
-                description: Adresse pour filtrer.
-              address1:
-                type: string
-                maxLength: 32
-                description: Adresse 1 pour filtrer.
-              postcode:
-                type: string
-                maxLength: 255
-                description: Code postal pour filtrer.
-              city:
-                type: string
-                maxLength: 255
-                description: Ville pour filtrer.
-              first_name:
-                type: string
-                maxLength: 255
-                description: Prénom pour filtrer.
-              last_name:
-                type: string
-                maxLength: 255
-                description: Nom pour filtrer.
-              company_name:
-                type: string
-                maxLength: 255
-                description: Nom de la société pour filtrer.
-              division:
-                type: string
-                maxLength: 255
-                description: Etat pour filtrer.
-              phone:
-                type: string
-                maxLength: 255
-                description: Numéro de téléphone pour filtrer.
+            type: string
+            format: date
+          example: "2023-01-01"
+        - name: filter[created_at_after]
+          in: query
+          description: Date de création après laquelle filtrer.
+          schema:
+            type: string
+            format: date
+          example: "2023-01-01"
+        - name: filter[updated_at_before]
+          in: query
+          description: Date de mise à jour avant laquelle filtrer.
+          schema:
+            type: string
+            format: date
+          example: "2023-01-01"
+        - name: filter[updated_at_after]
+          in: query
+          description: Date de mise à jour après laquelle filtrer.
+          schema:
+            type: string
+            format: date
+          example: "2023-01-01"
+        - name: filter[by_customer_uuid]
+          in: query
+          description: Filtrer par UUID du client.
+          schema:
+            type: string
+            maxLength: 255
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: filter[region_id]
+          in: query
+          description: Filtrer par ID de la région.
+          schema:
+            type: integer
+          example: 1
+        - name: filter[user_id]
+          in: query
+          description: Filtrer par ID de l'utilisateur.
+          schema:
+            type: integer
+          example: 123
+        - name: filter[address]
+          in: query
+          description: Filtrer par adresse.
+          schema:
+            type: string
+            maxLength: 32
+          example: "123 Main St"
+        - name: filter[address1]
+          in: query
+          description: Filtrer par adresse 1.
+          schema:
+            type: string
+            maxLength: 32
+          example: "123 Main St"
+        - name: filter[postcode]
+          in: query
+          description: Filtrer par code postal.
+          schema:
+            type: string
+            maxLength: 255
+          example: "75001"
+        - name: filter[city]
+          in: query
+          description: Filtrer par ville.
+          schema:
+            type: string
+            maxLength: 255
+          example: "Paris"
+        - name: filter[first_name]
+          in: query
+          description: Filtrer par prénom.
+          schema:
+            type: string
+            maxLength: 255
+          example: "John"
+        - name: filter[last_name]
+          in: query
+          description: Filtrer par nom.
+          schema:
+            type: string
+            maxLength: 255
+          example: "Doe"
+        - name: filter[company_name]
+          in: query
+          description: Filtrer par nom de la société.
+          schema:
+            type: string
+            maxLength: 255
+          example: "Acme Corp"
+        - name: filter[division]
+          in: query
+          description: Filtrer par état.
+          schema:
+            type: string
+            maxLength: 255
+          example: "Ile-de-France"
+        - name: filter[phone]
+          in: query
+          description: Filtrer par numéro de téléphone.
+          schema:
+            type: string
+            maxLength: 255
+          example: "+33123456789"
         - in: query
           name: sort
           description: Trier les adresses par colonne spécifiée.
@@ -1672,49 +1762,70 @@ paths:
         - bearerAuth: [ ]
       description: Cette route permet de récupérer une liste d'utilisateurs.
       parameters:
-        - in: query
-          name: filter
-          description: Filtres pour la liste d'utilisateurs.
+        - name: filter[created_at_before]
+          in: query
+          description: Date de création avant laquelle filtrer.
           schema:
-            type: object
-            properties:
-              created_at_before:
-                type: string
-                format: date
-                description: Date de création avant laquelle filtrer.
-              created_at_after:
-                type: string
-                format: date
-                description: Date de création après laquelle filtrer.
-              updated_at_before:
-                type: string
-                format: date
-                description: Date de mise à jour avant laquelle filtrer.
-              updated_at_after:
-                type: string
-                format: date
-                description: Date de mise à jour après laquelle filtrer.
-              uuid:
-                type: string
-                description: UUID de l'utilisateur.
-              id:
-                type: integer
-                description: ID de l'utilisateur.
-              email:
-                type: string
-                description: Adresse e-mail de l'utilisateur.
-              external_id:
-                type: string
-                description: ID externe de l'utilisateur.
-              disabled:
-                type: boolean
-                description: Statut de désactivation de l'utilisateur.
-              referrer:
-                type: string
-                description: Référent de l'utilisateur.
-          example:
-            created_at_before: "2023-01-01"
-            email: "user@example.com"
+            type: string
+            format: date
+          example: "2023-01-01"
+        - name: filter[created_at_after]
+          in: query
+          description: Date de création après laquelle filtrer.
+          schema:
+            type: string
+            format: date
+          example: "2023-01-01"
+        - name: filter[updated_at_before]
+          in: query
+          description: Date de mise à jour avant laquelle filtrer.
+          schema:
+            type: string
+            format: date
+          example: "2023-01-01"
+        - name: filter[updated_at_after]
+          in: query
+          description: Date de mise à jour après laquelle filtrer.
+          schema:
+            type: string
+            format: date
+          example: "2023-01-01"
+        - name: filter[uuid]
+          in: query
+          description: Filtrer par UUID de l'utilisateur.
+          schema:
+            type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: filter[id]
+          in: query
+          description: Filtrer par ID de l'utilisateur.
+          schema:
+            type: integer
+          example: 123
+        - name: filter[email]
+          in: query
+          description: Filtrer par adresse e-mail de l'utilisateur.
+          schema:
+            type: string
+          example: "user@example.com"
+        - name: filter[external_id]
+          in: query
+          description: Filtrer par ID externe de l'utilisateur.
+          schema:
+            type: string
+          example: "ext_12345"
+        - name: filter[disabled]
+          in: query
+          description: Filtrer par statut de désactivation de l'utilisateur.
+          schema:
+            type: boolean
+          example: false
+        - name: filter[referrer]
+          in: query
+          description: Filtrer par référent de l'utilisateur.
+          schema:
+            type: string
+          example: "referral_code_123"
         - in: query
           name: sort
           description: Trier la liste d'utilisateurs.
@@ -1845,84 +1956,111 @@ paths:
       security:
         - bearerAuth: [ ]
       parameters:
-        - name: filter
+        - name: filter[user_id]
           in: query
-          description: Filtres pour les transactions (tableau associatif)
+          description: Filtrer par ID de l'utilisateur.
           schema:
-            type: object
-            properties:
-              user_id:
-                type: integer
-                description: ID de l'utilisateur.
-              failure_code:
-                type: string
-                enum:
-                  - authentication_required
-                  - card_decline_rate_limit_exceeded
-                  - card_declined
-                  - card_not_supported
-                  - card_velocity_exceeded
-                  - cvc
-                  - do_not_honor
-                  - exp_month
-                  - expired_card
-                  - fraudulent
-                  - generic_decline
-                  - incorrect_cvc
-                  - incorrect_number
-                  - insufficient_funds
-                  - invalid_account
-                  - invalid_pin
-                  - invalid_request_error
-                  - lost_card
-                  - number
-                  - payment_method
-                  - pickup_card
-                  - processing_error
-                  - reenter_transaction
-                  - restricted_card
-                  - revocation_of_all_authorizations
-                  - revocation_of_authorization
-                  - statement_descriptor
-                  - statement_descriptor_suffix
-                  - stolen_card
-                  - transaction_not_allowed
-                  - try_again_later
-                description: Code d'échec de la transaction.
-              invoice_id:
-                type: integer
-                description: ID de la facture.
-              created_at_before:
-                type: string
-                format: date
-                description: Date de création avant.
-              created_at_after:
-                type: string
-                format: date
-                description: Date de création après.
-              updated_at_before:
-                type: string
-                format: date
-                description: Date de mise à jour avant.
-              updated_at_after:
-                type: string
-                format: date
-                description: Date de mise à jour après.
-              by_customer_uuid:
-                type: string
-                maxLength: 255
-                description: UUID du client.
-              source_id:
-                type: string
-                maxLength: 255
-                description: ID de la source.
-              amount_refunded:
-                type: number
-                description: Montant remboursé.
-              payment_intent_id:
-                type: string
-                maxLength: 255
-                description: ID de l'intention de paiement.
+            type: integer
+          example: 123
+        - name: filter[failure_code]
+          in: query
+          description: Filtrer par code d'échec de la transaction.
+          schema:
+            type: string
+            enum:
+              - authentication_required
+              - card_decline_rate_limit_exceeded
+              - card_declined
+              - card_not_supported
+              - card_velocity_exceeded
+              - cvc
+              - do_not_honor
+              - exp_month
+              - expired_card
+              - fraudulent
+              - generic_decline
+              - incorrect_cvc
+              - incorrect_number
+              - insufficient_funds
+              - invalid_account
+              - invalid_pin
+              - invalid_request_error
+              - lost_card
+              - number
+              - payment_method
+              - pickup_card
+              - processing_error
+              - reenter_transaction
+              - restricted_card
+              - revocation_of_all_authorizations
+              - revocation_of_authorization
+              - statement_descriptor
+              - statement_descriptor_suffix
+              - stolen_card
+              - transaction_not_allowed
+              - try_again_later
+          example: "card_declined"
+        - name: filter[invoice_id]
+          in: query
+          description: Filtrer par ID de la facture.
+          schema:
+            type: integer
+          example: 100
+        - name: filter[created_at_before]
+          in: query
+          description: Filtrer par date de création avant.
+          schema:
+            type: string
+            format: date
+          example: "2023-01-01"
+        - name: filter[created_at_after]
+          in: query
+          description: Filtrer par date de création après.
+          schema:
+            type: string
+            format: date
+          example: "2023-01-01"
+        - name: filter[updated_at_before]
+          in: query
+          description: Filtrer par date de mise à jour avant.
+          schema:
+            type: string
+            format: date
+          example: "2023-01-01"
+        - name: filter[updated_at_after]
+          in: query
+          description: Filtrer par date de mise à jour après.
+          schema:
+            type: string
+            format: date
+          example: "2023-01-01"
+        - name: filter[by_customer_uuid]
+          in: query
+          description: Filtrer par UUID du client.
+          schema:
+            type: string
+            maxLength: 255
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: filter[source_id]
+          in: query
+          description: Filtrer par ID de la source.
+          schema:
+            type: string
+            maxLength: 255
+          example: "src_12345"
+        - name: filter[amount_refunded]
+          in: query
+          description: Filtrer par montant remboursé.
+          schema:
+            type: number
+          example: 10.50
+        - name: filter[payment_intent_id]
+          in: query
+          description: Filtrer par ID de l'intention de paiement.
+          schema:
+            type: string
+            maxLength: 255
+          example: "pi_1234567890"
       responses:
         200:
           description: Réponse réussie
@@ -2050,12 +2188,14 @@ paths:
           schema:
             type: string
             format: date
+          example: "2023-01-01"
         - name: filter[created_at_after]
           in: query
           description: Filtre les KPIs créés après cette date
           schema:
             type: string
             format: date
+          example: "2023-01-01"
         - name: sort
           in: query
           description: Tri des résultats (prefix - pour ordre décroissant)
