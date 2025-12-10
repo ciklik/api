@@ -3469,6 +3469,9 @@ components:
         paid_class_key:
           description: driver de paiement
           type: string
+        prestashop_order_id:
+          description: Correspondance commande PrestaShop
+          type: [integer, 'null']
     UserSchema:
       type: object
       properties:
