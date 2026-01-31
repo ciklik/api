@@ -71,8 +71,10 @@ paths:
                   type: object
                   additionalProperties:
                     type: string
+                    maxLength: 5000
                   description: |
-                    Les clés commençant par "ciklik_encrypted_" seront automatiquement encryptées".
+                    Métadonnées personnalisées. Les valeurs doivent être des chaînes de caractères (max 5000 caractères).
+                    Les clés commençant par "ciklik_encrypted_" seront automatiquement encryptées.
               example:
                 metadata:
                   key1: "value1"
@@ -603,8 +605,9 @@ paths:
                   type: object
                   additionalProperties:
                     type: string
+                    maxLength: 5000
                   description: |
-                    Métadonnées personnalisées pour l'abonnement. 
+                    Métadonnées personnalisées pour l'abonnement. Les valeurs doivent être des chaînes de caractères (max 5000 caractères).
                     Les clés commençant par "ciklik_encrypted_" seront automatiquement encryptées.
             example:
               active: true
@@ -760,7 +763,7 @@ paths:
           example: "550e8400-e29b-41d4-a716-446655440000"
         - name: sort
           in: query
-          description: Options de tri.
+          description: "Trier les résultats (préfixer par - pour un tri descendant)"
           schema:
             type: string
             enum:
@@ -772,6 +775,7 @@ paths:
               - first_renewal_date
               - end_date
               - created_at
+              - updated_at
               - grace_period
               - grace_months
               - auto_pause_at
@@ -784,6 +788,28 @@ paths:
               - next_billing
               - interval
               - interval_count
+              - -plan_id
+              - -customer_id
+              - -canceled_at
+              - -active
+              - -start_date
+              - -first_renewal_date
+              - -end_date
+              - -created_at
+              - -updated_at
+              - -grace_period
+              - -grace_months
+              - -auto_pause_at
+              - -engaged_date
+              - -gift_activation_code
+              - -update_transporter_at
+              - -transporter_id
+              - -next_transporter_id
+              - -next_coupon_id
+              - -next_billing
+              - -interval
+              - -interval_count
+          example: "-created_at"
       responses:
         200:
           description: Liste de abonnements récupérée avec succès
@@ -1017,7 +1043,7 @@ paths:
             format: date-time
         - name: sort
           in: query
-          description: Trier les résultats par un champ donné.
+          description: "Trier les résultats (préfixer par - pour un tri descendant)"
           schema:
             type: string
             enum:
@@ -1055,6 +1081,41 @@ paths:
               - status
               - division
               - company_name
+              - -uuid
+              - -subscription_uuid
+              - -address_id
+              - -phone
+              - -tracking_number
+              - -customer_id
+              - -transporter_reference
+              - -transporter_id
+              - -created_at
+              - -updated_at
+              - -first_name
+              - -last_name
+              - -postcode
+              - -address1
+              - -address2
+              - -city
+              - -country
+              - -mail
+              - -transporter_name
+              - -plan
+              - -iso_code
+              - -relay
+              - -relay_id
+              - -orderable_name
+              - -orderable_id
+              - -orderable_type
+              - -order_id
+              - -scheduled_at
+              - -tracking_url
+              - -quantity
+              - -ref
+              - -status
+              - -division
+              - -company_name
+          example: "-created_at"
       responses:
         200:
           description: Succès - Liste des bons de livraison récupérée avec succès.
@@ -1152,6 +1213,7 @@ paths:
               properties:
                 tracking_number:
                   type: string
+                  maxLength: 255
                   description: Numéro de suivi à associer au bon de livraison
                 notification:
                   type: boolean
@@ -1357,7 +1419,7 @@ paths:
           example: "utm"
         - in: query
           name: sort
-          description: Champ de tri
+          description: "Trier les résultats (préfixer par - pour un tri descendant)"
           schema:
             type: string
             enum:
@@ -1373,6 +1435,19 @@ paths:
               - source
               - created_at
               - updated_at
+              - -user_id
+              - -address_id
+              - -invoice_address_id
+              - -transporter_id
+              - -status
+              - -subscription_uuid
+              - -invoice_id
+              - -total_paid
+              - -next_try
+              - -source
+              - -created_at
+              - -updated_at
+          example: "-created_at"
         - name: filter[prestashop_order_id]
           in: query
           description: Filtrer par correspondance commande prestasop
@@ -1572,7 +1647,7 @@ paths:
           example: "+33123456789"
         - in: query
           name: sort
-          description: Trier les adresses par colonne spécifiée.
+          description: "Trier les résultats (préfixer par - pour un tri descendant)"
           schema:
             type: string
             enum:
@@ -1589,6 +1664,20 @@ paths:
               - phone
               - created_at
               - updated_at
+              - -region_id
+              - -user_id
+              - -address
+              - -address1
+              - -postcode
+              - -city
+              - -first_name
+              - -last_name
+              - -company_name
+              - -division
+              - -phone
+              - -created_at
+              - -updated_at
+          example: "-created_at"
       responses:
         200:
           description: Réponse en cas de succès
@@ -1646,6 +1735,14 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - address
+                - postcode
+                - city
+                - first_name
+                - last_name
+                - phone
+                - region_id
               properties:
                 address:
                   type: string
@@ -1655,18 +1752,28 @@ paths:
                   maxLength: 32
                 postcode:
                   type: string
+                  maxLength: 20
                 city:
                   type: string
+                  maxLength: 255
                 first_name:
                   type: string
+                  maxLength: 255
                 last_name:
                   type: string
+                  maxLength: 255
                 company_name:
                   type: string
+                  maxLength: 255
                 phone:
                   type: string
+                  maxLength: 30
                 region_id:
                   type: integer
+                division:
+                  type: string
+                  maxLength: 10
+                  description: Code de subdivision (état/province). Requis pour les États-Unis.
       responses:
         200:
           description: Réponse en cas de succès
@@ -1834,7 +1941,7 @@ paths:
           example: "referral_code_123"
         - in: query
           name: sort
-          description: Trier la liste d'utilisateurs.
+          description: "Trier les résultats (préfixer par - pour un tri descendant)"
           schema:
             type: string
             enum:
@@ -1843,7 +1950,12 @@ paths:
               - email
               - created_at
               - updated_at
-            example: id
+              - -id
+              - -uuid
+              - -email
+              - -created_at
+              - -updated_at
+          example: "-created_at"
       responses:
         200:
           description: Réponse en cas de succès
@@ -2067,6 +2179,45 @@ paths:
             type: string
             maxLength: 255
           example: "pi_1234567890"
+        - name: sort
+          in: query
+          description: "Trier les résultats (préfixer par - pour un tri descendant)"
+          schema:
+            type: string
+            enum:
+              - order_id
+              - gateway
+              - transaction_id
+              - detail
+              - token
+              - paid
+              - amount
+              - refunded
+              - source_id
+              - failure_code
+              - invoice_id
+              - amount_refunded
+              - user_id
+              - payment_intent_id
+              - created_at
+              - updated_at
+              - -order_id
+              - -gateway
+              - -transaction_id
+              - -detail
+              - -token
+              - -paid
+              - -amount
+              - -refunded
+              - -source_id
+              - -failure_code
+              - -invoice_id
+              - -amount_refunded
+              - -user_id
+              - -payment_intent_id
+              - -created_at
+              - -updated_at
+          example: "-created_at"
       responses:
         200:
           description: Réponse réussie
@@ -2156,10 +2307,13 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - amount
               properties:
                 amount:
                   type: number
-                  description: Le montant à rembourser (numérique).
+                  minimum: 0.01
+                  description: Le montant à rembourser (numérique, minimum 0.01).
       responses:
         200:
           description: Réponse réussie
