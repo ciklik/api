@@ -27,13 +27,15 @@ tags:
   - name: kpis
     description: Opérations liées aux indicateurs de performance
   - name: addresses
-    description: Opérations liées aux bons de adresses
+    description: Opérations liées aux adresses
   - name: customers
     description: Opérations liées aux comptes utilisateurs
   - name: transactions
     description: Opérations liées aux transactions
   - name: rebill-errors
     description: Opérations liées aux erreurs de rebill
+  - name: orders
+    description: Opérations liées aux commandes
 paths:
   /whoiam:
     get:
@@ -183,26 +185,26 @@ paths:
           schema:
             type: string
             enum:
-              - plan_id
-              - customer_id
-              - canceled_at
+              - id
+              - name
+              - id_category
+              - quantity
+              - price
               - active
-              - start_date
-              - first_renewal_date
-              - end_date
+              - slug
+              - ref
               - created_at
-              - grace_period
-              - grace_months
-              - auto_pause_at
-              - engaged_date
-              - gift_activation_code
-              - update_transporter_at
-              - transporter_id
-              - next_transporter_id
-              - next_coupon_id
-              - next_billing
-              - interval
-              - interval_count
+              - updated_at
+              - -id
+              - -name
+              - -id_category
+              - -quantity
+              - -price
+              - -active
+              - -slug
+              - -ref
+              - -created_at
+              - -updated_at
         - name: page
           in: query
           description: Numéro de la page pour la pagination
@@ -997,7 +999,7 @@ paths:
             type: string
         - name: filter[division]
           in: query
-          description: Filtrer état.
+          description: Filtrer par état/province.
           schema:
             type: string
         - name: filter[company_name]
@@ -1154,22 +1156,22 @@ paths:
   /deliveries/{id}:
     get:
       operationId: getDelivery
-      summary: Liste détails d'un bon de livraison
+      summary: Récupérer les détails d'un bon de livraison
       tags:
         - deliveries
       security:
         - bearerAuth: [ ]
-      description: Récupère la liste des élements d'un bon de livraison.
+      description: Récupère les détails d'un bon de livraison.
       parameters:
         - name: id
           in: path
-          description: ID de l'abonnement
+          description: ID du bon de livraison
           required: true
           schema:
             type: string
       responses:
         200:
-          description: Succès - Liste des bons de livraison récupérée avec succès.
+          description: Succès - Bon de livraison récupéré avec succès.
           content:
             application/json:
               schema:
@@ -1191,7 +1193,7 @@ paths:
                 $ref: "#/components/schemas/ValidationError"
     put:
       operationId: updateDelivery
-      summary: Mettre à jour un BL
+      summary: Mettre à jour un bon de livraison
       tags:
         - deliveries
       security:
@@ -1200,7 +1202,7 @@ paths:
       parameters:
         - name: id
           in: path
-          description: ID de l'abonnement
+          description: ID du bon de livraison
           required: true
           schema:
             type: string
@@ -1230,7 +1232,7 @@ paths:
                     - canceled
       responses:
         200:
-          description: Succès - Liste des bons de livraison traités avec succès.
+          description: Succès - Bon de livraison mis à jour avec succès.
           content:
             application/json:
               schema:
@@ -1450,7 +1452,7 @@ paths:
           example: "-created_at"
         - name: filter[prestashop_order_id]
           in: query
-          description: Filtrer par correspondance commande prestasop
+          description: Filtrer par correspondance commande PrestaShop
           schema:
             type: integer
           example: 500
@@ -1517,7 +1519,7 @@ paths:
         401:
           description: Accès non autorisé
         403:
-          description: Accès interd
+          description: Accès interdit
         404:
           description: La commande n'a pas été trouvée
         422:
@@ -1807,7 +1809,7 @@ paths:
         - in: path
           name: id
           required: true
-          description: ID de l'adresse à mettre à jour.
+          description: ID de l'adresse à récupérer.
           schema:
             type: integer
       responses:
@@ -1843,7 +1845,7 @@ paths:
         - in: path
           name: id
           required: true
-          description: ID de l'adresse à mettre à jour.
+          description: ID de l'adresse à supprimer.
           schema:
             type: integer
       responses:
@@ -2043,10 +2045,10 @@ paths:
       parameters:
         - name: id
           in: path
-          description: UUID de l'utilisateur
+          description: ID ou UUID de l'utilisateur
           required: true
           schema:
-            type: integer
+            type: string
       responses:
         200:
           description: Succès
@@ -2261,7 +2263,7 @@ paths:
       tags:
         - transactions
       security:
-        - BearerAuth: [ ]
+        - bearerAuth: [ ]
       parameters:
         - name: transaction_id
           in: path
@@ -2293,7 +2295,7 @@ paths:
       tags:
         - transactions
       security:
-        - BearerAuth: [ ]
+        - bearerAuth: [ ]
       parameters:
           - name: transaction_id
             in: path
@@ -2534,7 +2536,7 @@ paths:
           example: "api"
         - name: filter[by_subscription_uuid]
           in: query
-          description: Filtrer par ID de l'abonnement
+          description: Filtrer par UUID de l'abonnement
           schema:
             type: string
             maxLength: 255
@@ -2877,7 +2879,7 @@ components:
               description: Les méthodes de paiement associées à l'entité "Website".
             webhooks:
               type: object
-              description : Liste des évènements actifs et url correspondante
+              description: Liste des évènements actifs et URL correspondante
               additionalProperties:
                 type: string
             metadata:
@@ -3012,7 +3014,7 @@ components:
       example:
         ref: "REFABOPRODUIT"
         name: "Super nom produit"
-        slug: "slug-de-rpoduit"
+        slug: "slug-de-produit"
         price: "17.50"
         description: "Petite description produit"
         tax: "0.2"
@@ -3098,7 +3100,7 @@ components:
       example:
         ref: "REFABOPRODUIT"
         name: "Super nom produit"
-        slug: "slug-de-rpoduit"
+        slug: "slug-de-produit"
         price: "17.50"
         description: "Petite description produit"
         tax: "0.2"
@@ -3167,7 +3169,7 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/OfferEntity"
-        frequences:
+        frequencies:
           type: array
           items:
             $ref: "#/components/schemas/FrequenceEntity"
@@ -3314,8 +3316,18 @@ components:
               description: Code alpha du pays.
 
     Transporter:
-      type: string
-      description: Transporteur associé à l'abonnement.
+      type: object
+      description: Transporteur associé à la livraison.
+      properties:
+        id:
+          type: integer
+          description: ID du transporteur.
+        name:
+          type: string
+          description: Nom du transporteur.
+        reference:
+          type: string
+          description: Référence du transporteur.
 
     User:
       type: object
