@@ -642,6 +642,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ValidationError"
     delete:
+      operationId: deleteSubscription
       tags:
         - subscriptions
       security:
