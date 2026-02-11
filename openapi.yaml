@@ -641,6 +641,48 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ValidationError"
+    delete:
+      tags:
+        - subscriptions
+      security:
+        - bearerAuth: [ ]
+      summary: Supprimer un abonnement
+      description: >-
+        Supprime un abonnement (soft delete). L'abonnement doit être inactif
+        (active = false) et appartenir au tenant authentifié pour pouvoir être supprimé.
+      parameters:
+        - name: id
+          in: path
+          description: UUID de l'abonnement à supprimer.
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Succès - Abonnement supprimé.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: true
+        401:
+          description: Non autorisé - L'authentification est requise.
+        403:
+          description: Interdit - Accès non autorisé.
+        404:
+          description: Non trouvé - Abonnement introuvable ou n'appartenant pas au tenant authentifié.
+        422:
+          description: Erreur de validation - L'abonnement est encore actif.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
   /subscriptions:
     get:
       tags:
