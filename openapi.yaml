@@ -55,6 +55,8 @@ paths:
           description: Authentification requise
         401:
           description: Accès non autorisé
+        429:
+          $ref: '#/components/responses/TooManyRequests'
     put:
       summary: Mettre à jour les métadonnées d'un site web (WebsiteEntity)
       description: Permet de mettre à jour les métadonnées d'un site web (WebsiteEntity) en modifiant ou ajoutant des clés/valeurs au champ "metadata".
@@ -99,6 +101,8 @@ paths:
           description: Authentification requise
         401:
           description: Accès non autorisé
+        429:
+          $ref: '#/components/responses/TooManyRequests'
   /products:
     get:
       summary: Récupérer une liste de produits
@@ -244,6 +248,8 @@ paths:
           description: Accès non autorisé
         403:
           description: Authentification requise
+        429:
+          $ref: '#/components/responses/TooManyRequests'
     post:
       summary: Créer ou mettre à jour un produit
       tags:
@@ -276,6 +282,8 @@ paths:
           description: Authentification requise
         401:
           description: Accès non autorisé
+        429:
+          $ref: '#/components/responses/TooManyRequests'
   /products/{ref}:
     get:
       summary: Récupérer un produit par référence (SKU)
@@ -306,6 +314,8 @@ paths:
           description: Accès non autorisé
         404:
           description: Produit non trouvé
+        429:
+          $ref: '#/components/responses/TooManyRequests'
     patch:
       summary: Mettre à jour un produit par référence (SKU)
       tags:
@@ -342,6 +352,8 @@ paths:
           description: Authentification requise
         401:
           description: Accès non autorisé
+        429:
+          $ref: '#/components/responses/TooManyRequests'
   /webhooks:
     get:
       summary: Lister le dernier webhook envoyé
@@ -392,6 +404,8 @@ paths:
           description: Authentification requise
         401:
           description: Accès non autorisé
+        429:
+          $ref: '#/components/responses/TooManyRequests'
     post:
       summary: Ajouter un webhook
       tags:
@@ -447,6 +461,8 @@ paths:
           description: Authentification requise
         401:
           description: Accès non autorisé
+        429:
+          $ref: '#/components/responses/TooManyRequests'
     delete:
       summary: Supprimer un webhook
       tags:
@@ -499,6 +515,8 @@ paths:
           description: Authentification requise
         401:
           description: Accès non autorisé
+        429:
+          $ref: '#/components/responses/TooManyRequests'
   /subscriptions/{id}:
     get:
       tags:
@@ -535,6 +553,8 @@ paths:
           description: Accès non autorisé
         404:
           description: Abonnement introuvable
+        429:
+          $ref: '#/components/responses/TooManyRequests'
     put:
       tags:
         - subscriptions
@@ -641,6 +661,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ValidationError"
+        429:
+          $ref: '#/components/responses/TooManyRequests'
     delete:
       operationId: deleteSubscription
       tags:
@@ -684,6 +706,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ValidationError"
+        429:
+          $ref: '#/components/responses/TooManyRequests'
   /subscriptions:
     get:
       tags:
@@ -890,6 +914,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ValidationError"
+        429:
+          $ref: '#/components/responses/TooManyRequests'
   /deliveries:
     get:
       operationId: listDeliveries
@@ -1196,6 +1222,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ValidationError"
+        429:
+          $ref: '#/components/responses/TooManyRequests'
   /deliveries/{id}:
     get:
       operationId: getDelivery
@@ -1234,6 +1262,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ValidationError"
+        429:
+          $ref: '#/components/responses/TooManyRequests'
     put:
       operationId: updateDelivery
       summary: Mettre à jour un bon de livraison
@@ -1295,6 +1325,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ValidationError"
+        429:
+          $ref: '#/components/responses/TooManyRequests'
     delete:
       operationId: deleteDelivery
       tags:
@@ -1324,6 +1356,8 @@ paths:
           description: Non autorisé, veuillez vous authentifier
         404:
           description: Élément du bon de livraison non trouvé
+        429:
+          $ref: '#/components/responses/TooManyRequests'
   /orders:
     get:
       tags:
@@ -1534,6 +1568,8 @@ paths:
           description: Authentification requise
         401:
           description: Accès non autorisé
+        429:
+          $ref: '#/components/responses/TooManyRequests'
   /orders/{id}:
     get:
       summary: Récupérer le détail d'une commande
@@ -1571,6 +1607,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
   /addresses:
     get:
       summary: Liste des adresses
@@ -1760,6 +1798,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
   /addresses/{id}:
     put:
       summary: Mettre à jour une adresse
@@ -1841,6 +1881,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
     get:
       summary: Récupérer les données d'une adresse
       tags:
@@ -1877,6 +1919,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
     delete:
       summary: Supprimer une adresse
       tags:
@@ -1911,6 +1955,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
   /customers:
     get:
       summary: Liste des utilisateurs
@@ -2036,6 +2082,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
     post:
       summary: Créer un nouvel utilisateur
       tags:
@@ -2078,6 +2126,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
   /customers/{id}:
     get:
       summary: Récupérer les détails d'un utilisateur
@@ -2111,6 +2161,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
   /transactions:
     get:
       summary: Récupérer la liste des transactions
@@ -2300,6 +2352,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
   /transactions/{transaction_id}:
     get:
       summary: Récupérer une transaction par ID
@@ -2333,6 +2387,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
     put:
       summary: Demander le remboursement d'une transaction par ID
       tags:
@@ -2378,6 +2434,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
   /kpis:
     get:
       tags:
@@ -2557,6 +2615,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
   /rebill-errors:
     get:
       operationId: listRebillErrors
@@ -2666,6 +2726,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
   /rebill-errors/{id}:
     get:
       operationId: getRebillError
@@ -2704,6 +2766,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
 components:
   securitySchemes:
     bearerAuth:
@@ -2711,6 +2775,37 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: Utilisez un jeton d'authentification pour accéder à cette ressource
+  headers:
+    X-RateLimit-Limit:
+      description: Nombre maximum de requêtes autorisées par minute.
+      schema:
+        type: integer
+        example: 100
+    X-RateLimit-Remaining:
+      description: Nombre de requêtes restantes dans la fenêtre courante.
+      schema:
+        type: integer
+        example: 95
+    Retry-After:
+      description: Nombre de secondes avant la réinitialisation de la fenêtre de rate limiting.
+      schema:
+        type: integer
+        example: 60
+  responses:
+    TooManyRequests:
+      description: Rate limit atteint - 100 requêtes par minute maximum.
+      headers:
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/X-RateLimit-Limit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/X-RateLimit-Remaining'
+        Retry-After:
+          $ref: '#/components/headers/Retry-After'
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: "Too many requests"
   schemas:
     TransactionSchema:
       type: object
