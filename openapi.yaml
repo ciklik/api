@@ -708,6 +708,194 @@ paths:
                 $ref: "#/components/schemas/ValidationError"
         429:
           $ref: '#/components/responses/TooManyRequests'
+  /subscriptions/{id}/products/{external_id}:
+    patch:
+      operationId: updateSubscriptionProduct
+      tags:
+        - subscriptions
+      security:
+        - bearerAuth: [ ]
+      summary: Modifier la quantité d'un produit dans un abonnement
+      description: Met à jour la quantité d'un produit spécifique déjà rattaché à l'abonnement. Les produits avec personnalisation (customization hash) ne sont pas modifiables.
+      parameters:
+        - name: id
+          in: path
+          description: UUID de l'abonnement
+          required: true
+          schema:
+            type: string
+        - name: external_id
+          in: path
+          description: Identifiant externe du produit (exodus_id)
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - quantity
+              properties:
+                quantity:
+                  type: integer
+                  minimum: 1
+                  maximum: 9999
+                  description: Nouvelle quantité du produit
+            example:
+              quantity: 3
+      responses:
+        200:
+          description: Quantité mise à jour avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SubscriptionEntity'
+        401:
+          description: Non autorisé - L'authentification est requise.
+        404:
+          description: Abonnement ou produit introuvable
+        422:
+          description: Erreur de validation (quantité invalide, produit personnalisé, abonnement inactif)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        429:
+          $ref: '#/components/responses/TooManyRequests'
+    delete:
+      operationId: removeSubscriptionProduct
+      tags:
+        - subscriptions
+      security:
+        - bearerAuth: [ ]
+      summary: Retirer un produit d'un abonnement
+      description: Retire un produit spécifique de l'abonnement. Impossible de retirer le dernier produit. Les produits avec personnalisation ne sont pas modifiables.
+      parameters:
+        - name: id
+          in: path
+          description: UUID de l'abonnement
+          required: true
+          schema:
+            type: string
+        - name: external_id
+          in: path
+          description: Identifiant externe du produit (exodus_id)
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Produit retiré avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SubscriptionEntity'
+        401:
+          description: Non autorisé - L'authentification est requise.
+        404:
+          description: Abonnement ou produit introuvable
+        422:
+          description: Erreur de validation (dernier produit, produit personnalisé, abonnement inactif)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        429:
+          $ref: '#/components/responses/TooManyRequests'
+  /subscriptions/{id}/products:
+    post:
+      operationId: addSubscriptionProduct
+      tags:
+        - subscriptions
+      security:
+        - bearerAuth: [ ]
+      summary: Ajouter un produit à un abonnement
+      description: |
+        Ajoute un produit à l'abonnement ou met à jour la quantité si le produit est déjà rattaché (upsert).
+        Si le produit n'existe pas en base, il est créé automatiquement avec le prix et la TVA du premier produit existant de l'abonnement.
+        Les produits avec personnalisation (customization hash) ne sont pas acceptés.
+        Retourne 201 pour un nouvel ajout, 200 pour une mise à jour de quantité.
+      parameters:
+        - name: id
+          in: path
+          description: UUID de l'abonnement
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - external_id
+                - name
+              properties:
+                external_id:
+                  type: string
+                  maxLength: 255
+                  description: Identifiant externe du produit (exodus_id)
+                name:
+                  type: string
+                  maxLength: 255
+                  description: Nom du produit (utilisé lors de la création automatique)
+                quantity:
+                  type: integer
+                  minimum: 1
+                  maximum: 9999
+                  default: 1
+                  description: Quantité du produit (défaut 1)
+                tax:
+                  type: number
+                  minimum: 0
+                  maximum: 1
+                  description: Taux de TVA (ex. 0.2 pour 20%). Si absent, reprend la TVA du premier produit de l'abonnement.
+            example:
+              external_id: "12345"
+              name: "Produit mensuel"
+              quantity: 2
+              tax: 0.2
+      responses:
+        200:
+          description: Quantité mise à jour (upsert - produit déjà rattaché)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SubscriptionEntity'
+        201:
+          description: Produit ajouté à l'abonnement
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SubscriptionEntity'
+        401:
+          description: Non autorisé - L'authentification est requise.
+        404:
+          description: Abonnement introuvable
+        422:
+          description: Erreur de validation (champs manquants, produit personnalisé, abonnement inactif)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        429:
+          $ref: '#/components/responses/TooManyRequests'
   /subscriptions:
     get:
       tags:
@@ -3482,9 +3670,6 @@ components:
         refp:
           type: string
           description: Référence du parcours de l'utilisateur.
-        can_void_with_coupon:
-          type: boolean
-          description: Indique si l'utilisateur peut annuler avec un coupon.
         has_active_subscription:
           type: boolean
           description: Indique si l'utilisateur a un abonnement actif.
@@ -3793,9 +3978,6 @@ components:
         refp:
           type: string
           description: Référence P de l'utilisateur.
-        can_void_with_coupon:
-          type: boolean
-          description: Indique si l'utilisateur peut annuler avec un coupon.
         has_active_subscription:
           type: boolean
           description: Indique si l'utilisateur a un abonnement actif.
