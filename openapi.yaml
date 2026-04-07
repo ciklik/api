@@ -758,6 +758,8 @@ paths:
                     $ref: '#/components/schemas/SubscriptionEntity'
         401:
           description: Non autorisé - L'authentification est requise.
+        403:
+          description: Interdit — le token doit appartenir à un Tenant
         404:
           description: Abonnement ou produit introuvable
         422:
@@ -801,6 +803,8 @@ paths:
                     $ref: '#/components/schemas/SubscriptionEntity'
         401:
           description: Non autorisé - L'authentification est requise.
+        403:
+          description: Interdit — le token doit appartenir à un Tenant
         404:
           description: Abonnement ou produit introuvable
         422:
@@ -821,9 +825,10 @@ paths:
       summary: Ajouter un produit à un abonnement
       description: |
         Ajoute un produit à l'abonnement ou met à jour la quantité si le produit est déjà rattaché (upsert).
-        Si le produit n'existe pas en base, il est créé automatiquement avec le prix et la TVA du premier produit existant de l'abonnement.
+        Si le produit existe déjà en base (via son `external_id`), il est simplement rattaché — les champs `price` et `tax` du corps sont alors ignorés.
+        Si le produit n'existe pas, il est créé automatiquement : `price` devient **obligatoire**, `tax` défaut à 0 si absent.
         Les produits avec personnalisation (customization hash) ne sont pas acceptés.
-        Retourne 201 pour un nouvel ajout, 200 pour une mise à jour de quantité.
+        Retourne 201 pour un nouvel attachement (nouveau produit créé ou produit existant nouvellement rattaché), 200 pour une mise à jour de quantité sur un produit déjà rattaché.
       parameters:
         - name: id
           in: path
@@ -847,23 +852,29 @@ paths:
                   description: Identifiant externe du produit (exodus_id)
                 name:
                   type: string
+                  minLength: 1
                   maxLength: 255
-                  description: Nom du produit (utilisé lors de la création automatique)
+                  description: Nom du produit (utilisé lors de la création automatique, ignoré si le produit existe déjà)
                 quantity:
                   type: integer
                   minimum: 1
                   maximum: 9999
                   default: 1
                   description: Quantité du produit (défaut 1)
+                price:
+                  type: number
+                  minimum: 0
+                  description: Prix HT du produit. **Obligatoire** si le produit n'existe pas encore en base et doit être créé. Ignoré si le produit existe déjà.
                 tax:
                   type: number
                   minimum: 0
                   maximum: 1
-                  description: Taux de TVA (ex. 0.2 pour 20%). Si absent, reprend la TVA du premier produit de l'abonnement.
+                  description: Taux de TVA (ex. 0.2 pour 20%). Utilisé uniquement lors de la création ; défaut à 0 si absent. Ignoré si le produit existe déjà.
             example:
               external_id: "12345"
               name: "Produit mensuel"
               quantity: 2
+              price: 19.99
               tax: 0.2
       responses:
         200:
@@ -888,8 +899,10 @@ paths:
           description: Non autorisé - L'authentification est requise.
         404:
           description: Abonnement introuvable
+        403:
+          description: Interdit — le token doit appartenir à un Tenant
         422:
-          description: Erreur de validation (champs manquants, produit personnalisé, abonnement inactif)
+          description: Erreur de validation (champs manquants, produit personnalisé, abonnement inactif, `price` manquant lors de la création d'un produit)
           content:
             application/json:
               schema:
