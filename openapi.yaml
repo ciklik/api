@@ -942,6 +942,20 @@ paths:
             type: string
             format: date
           example: "2023-01-01"
+        - name: filter[updated_at_before]
+          in: query
+          description: Filtre par date de mise à jour avant la date spécifiée.
+          schema:
+            type: string
+            format: date
+          example: "2023-01-01"
+        - name: filter[updated_at_after]
+          in: query
+          description: Filtre par date de mise à jour après la date spécifiée.
+          schema:
+            type: string
+            format: date
+          example: "2023-01-01"
         - name: filter[canceled_since_before]
           in: query
           description: Filtre par date d'annulation avant la date spécifiée.
@@ -3757,6 +3771,10 @@ components:
           type: string
           format: date-time
           description: Date de création de l'abonnement.
+        updated_at:
+          type: string
+          format: date-time
+          description: Date de dernière mise à jour de l'abonnement.
         end_date:
           type: string
           format: date-time
