@@ -3210,6 +3210,52 @@ components:
         ref:
           type: string
           description: Référence du produit dans le BL au moment de la commande.
+        customization_products:
+          type: array
+          description: >
+            Composition de base de la box, issue de la sélection de personnalisation de l'abonnement.
+            Chaque entrée est une ligne produit identifiée par son customizationId.
+          items:
+            type: object
+            properties:
+              customizationId:
+                type: integer
+                description: Identifiant unique de la ligne de personnalisation (clé de rapprochement avec extra_customization_products).
+              productId:
+                type: integer
+                description: ID du produit.
+              quantity:
+                type: integer
+                description: Quantité de base de la ligne.
+              ref:
+                type: string
+                description: Référence du produit.
+        extra_customization_products:
+          type: array
+          description: >
+            Surcharges propres à ce bon de livraison (modifications manuelles de la box).
+            IMPORTANT : chaque entrée est un OVERRIDE ABSOLU par customizationId, pas un delta.
+            Quand une ligne figure ici, sa quantity REMPLACE celle de customization_products pour le
+            même customizationId ; elle ne s'y ajoute jamais. Les lignes absentes de ce tableau
+            conservent la quantité de customization_products. La composition finale se calcule donc en
+            partant de customization_products, puis en remplaçant chaque customizationId présent dans
+            extra_customization_products (ou en l'ajoutant s'il n'existe pas en base). Ne jamais
+            additionner les deux tableaux.
+          items:
+            type: object
+            properties:
+              customizationId:
+                type: integer
+                description: Identifiant de la ligne de personnalisation surchargée (matche un customizationId de customization_products pour un remplacement, ou en ajoute un nouveau).
+              productId:
+                type: integer
+                description: ID du produit.
+              quantity:
+                type: integer
+                description: Quantité finale absolue de la ligne (remplace la quantité de base).
+              ref:
+                type: string
+                description: Référence du produit.
     WebsiteEntity:
       type: object
       properties:
@@ -3830,8 +3876,37 @@ components:
 #          type: array
 #          description: Liste des produits de personnalisation associés à l'abonnement.
         retry_link:
-          type: string
-          description: Lien de réessai.
+          type: [string, 'null']
+          description: >
+            Lien de reprise de la dernière commande en attente de paiement de l'abonnement (renouvellement refusé),
+            null s'il n'y a rien à régler. Le lien connecte le client à son compte : ne pas l'afficher ni le journaliser.
+        pending_payment:
+          type: [object, 'null']
+          description: >
+            Paiement en attente de l'abonnement : la dernière commande de renouvellement refusée, à régler par le lien
+            de reprise. Null sans commande en attente ou sans lien de reprise.
+          properties:
+            order_id:
+              type: integer
+              description: Identifiant de la commande en attente.
+            amount:
+              type: number
+              format: float
+              description: Montant TTC à régler, celui que fait payer le lien de reprise.
+            currency:
+              type: [string, 'null']
+              description: Code ISO 4217 de la devise, en majuscules (EUR).
+            retry_link:
+              type: string
+              description: Lien de reprise de la commande, identique à retry_link.
+            created_at:
+              type: string
+              format: date-time
+              description: Date de création de la commande en attente.
+            next_try:
+              type: [string, 'null']
+              format: date-time
+              description: Date de la prochaine tentative de prélèvement automatique, null s'il n'y en a plus.
         interval:
           type: string
           description: Intervalle de facturation de l'abonnement.
