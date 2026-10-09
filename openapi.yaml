@@ -356,7 +356,8 @@ paths:
           $ref: '#/components/responses/TooManyRequests'
   /webhooks:
     get:
-      summary: Lister le dernier webhook envoyé
+      summary: Lister les derniers webhooks envoyés
+      description: Renvoie les trois derniers webhooks envoyés pour cet évènement, du plus récent au plus ancien. Chaque élément est la charge utile envoyée.
       tags:
         - webhooks
       security:
@@ -384,16 +385,25 @@ paths:
               - deleted_shippingbox
               - created_user
               - updated_user
+              - deleted_user
               - created_optin
               - updated_optin
       responses:
         200:
-          description: Un évènement existe, ou le nom de l'évènement existe. Si un évènement existe, une représentation de l'objet correspondant sera retourné
+          description: Les trois derniers webhooks envoyés pour cet évènement (liste vide si aucun)
           content:
             application/json:
               schema:
                 type: object
-                properties: {}
+                properties:
+                  data:
+                    type: array
+                    description: Charges utiles envoyées, de la plus récente à la plus ancienne
+                    items:
+                      type: object
+                      additionalProperties: true
+        404:
+          description: Nom d'évènement inconnu
         422:
           description: Erreur de validation
           content:
@@ -437,6 +447,7 @@ paths:
                     - deleted_shippingbox
                     - created_user
                     - updated_user
+                    - deleted_user
                     - created_optin
                     - updated_optin
                 hook_url:
@@ -494,6 +505,7 @@ paths:
                     - deleted_shippingbox
                     - created_user
                     - updated_user
+                    - deleted_user
                     - created_optin
                     - updated_optin
               required:
@@ -1479,7 +1491,7 @@ paths:
                 $ref: "#/components/schemas/ValidationError"
         429:
           $ref: '#/components/responses/TooManyRequests'
-    put:
+    post:
       operationId: updateDelivery
       summary: Mettre à jour un bon de livraison
       tags:
@@ -1710,6 +1722,7 @@ paths:
               - unsub_postpone
               - reactivation_offer
               - followup
+              - gift_conversion
           example: "utm"
         - in: query
           name: sort
