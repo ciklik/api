@@ -2028,6 +2028,106 @@ paths:
                 $ref: '#/components/schemas/ValidationError'
         429:
           $ref: '#/components/responses/TooManyRequests'
+    post:
+      summary: Créer une adresse
+      tags:
+        - addresses
+      security:
+        - bearerAuth: [ ]
+      description: |
+        Cette route permet de créer une adresse pour un client du site.
+        Le client (`user_id`) doit appartenir au site du jeton et le pays (`region_id`) doit être ouvert sur le site.
+        Le code postal est contrôlé selon le pays ; le téléphone doit être un mobile valide du pays si le contrôle des numéros est actif sur le site.
+        Les champs texte sont normalisés (majuscules, sans accents ni ponctuation). Tout champ non listé est ignoré.
+        La création déclenche le webhook `created_address`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+                - region_id
+                - address
+                - postcode
+                - city
+                - first_name
+                - last_name
+                - phone
+              properties:
+                user_id:
+                  type: integer
+                  description: ID du client (champ `id` du client), qui doit appartenir au site du jeton.
+                  example: 123
+                region_id:
+                  type: integer
+                  description: ID du pays, parmi les pays ouverts sur le site.
+                  example: 1
+                address:
+                  type: string
+                  maxLength: 32
+                  example: "12 rue de la Paix"
+                address1:
+                  type: [string, "null"]
+                  maxLength: 32
+                  description: Complément d'adresse.
+                  example: "Bâtiment B"
+                postcode:
+                  type: string
+                  maxLength: 20
+                  description: Code postal, au format du pays.
+                  example: "75002"
+                city:
+                  type: string
+                  maxLength: 255
+                  example: "Paris"
+                first_name:
+                  type: string
+                  maxLength: 255
+                  example: "Jeanne"
+                last_name:
+                  type: string
+                  maxLength: 255
+                  example: "Martin"
+                company_name:
+                  type: [string, "null"]
+                  maxLength: 255
+                  example: "Acme"
+                phone:
+                  type: string
+                  maxLength: 30
+                  description: Téléphone mobile, au format national ou international.
+                  example: "0612345678"
+                division:
+                  type: [string, "null"]
+                  maxLength: 10
+                  description: Code de subdivision (état). Requis pour les États-Unis, parmi les codes d'État (par exemple NY).
+                  example: "NY"
+      responses:
+        201:
+          description: Adresse créée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Address'
+        401:
+          description: Accès non autorisé
+        403:
+          description: Accès interdit (jeton qui n'est pas celui d'un site)
+        404:
+          description: Le client n'a pas été trouvé (supprimé entre la validation et la création ; un client inconnu ou d'un autre site renvoie 422)
+        422:
+          description: Erreur de validation (client inconnu ou d'un autre site, pays non ouvert, code postal ou téléphone invalide, champ manquant ou trop long)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
   /addresses/{id}:
     put:
       summary: Mettre à jour une adresse
