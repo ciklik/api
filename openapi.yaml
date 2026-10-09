@@ -2038,6 +2038,7 @@ paths:
         Cette route permet de créer une adresse pour un client du site.
         Le client (`user_id`) doit appartenir au site du jeton et le pays (`region_id`) doit être ouvert sur le site.
         Le code postal est contrôlé selon le pays ; le téléphone doit être un mobile valide du pays si le contrôle des numéros est actif sur le site.
+        Pour un pays que la bibliothèque de numérotation ne connaît pas (Terres australes françaises par exemple), le téléphone n'est pas contrôlé et il est enregistré tel que saisi.
         Les champs texte sont normalisés (majuscules, sans accents ni ponctuation). Tout champ non listé est ignoré.
         La création déclenche le webhook `created_address`.
       requestBody:
