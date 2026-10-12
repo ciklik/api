@@ -2,9 +2,16 @@
   "$schema": "https://context7.com/schema/context7.json",
   "projectTitle": "Ciklik API",
   "description": "API REST v3 de Ciklik, plateforme d'abonnement e-commerce (PrestaShop, sites hébergés) : abonnements, commandes, clients, adresses, livraisons, transactions, webhooks.",
-  "excludeFolders": ["node_modules", "dist"],
+  "excludeFolders": [
+    "node_modules",
+    "dist",
+    "scripts"
+  ],
   "rules": [
     "Authentification par jeton Bearer fourni par Ciklik pour chaque site marchand.",
     "La spécification de référence est openapi.yaml (OpenAPI 3) ; la documentation publiée est https://ciklik.github.io/api/."
+  ],
+  "folders": [
+    "docs"
   ]
 }
