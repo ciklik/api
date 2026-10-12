@@ -11,7 +11,7 @@ servers:
 info:
   title: Ciklik API
   version: 1.0.0
-  description: "# Bienvenue sur l'API Ciklik. Vous pouvez l'utiliser pour accéder aux ressources de votre compte, ou lancer des actions de base.\n## API Endpoints\nThe base endpoint is https://{environment}.ciklik.co/api/v3\n## Authentification\nL'API supporte l'authentification via Bearer token:\n- Bearer Token\n\nExemple :\n  ```curl\n  curl --location 'https://{environment}.ciklik.co/api/v3' --header 'Authorization: Bearer <Ciklik Token>'\n  ```\n## Request Limit\nLe nombre de requête est limité à 100 par minute. Si la limite est atteinte, la réponse http sera `429 Too Many Requests`.\n## Filtres\nCertains endpoints de l'API prennent en charge le filtrage des résultats sur un ensemble spécifié de champs. Chaque endpoint qui prend en charge le filtrage énumérera les champs qui peuvent être filtrés. Plusieurs champs peuvent être combinés en utilisant un caractère esperluette &\n\nExemple: `?filter[status]=received&filter[created_at]=2023-11-17`\n## Pagination\nLes listes de résultats de l'API sont paginées. La limite est de 20 éléments par requête. Vous pouvez obtenir les différentes pages avec la query string `page`, default value `1`.\n\nLe nombre total d'éléments dans une liste est disponible dans un champ `total` .\n\nExemple: `?page=2`\n"
+  description: "# Bienvenue sur l'API Ciklik. Vous pouvez l'utiliser pour accéder aux ressources de votre compte, ou lancer des actions de base.\n## API Endpoints\nThe base endpoint is https://{environment}.ciklik.co/api/v3\n## Authentification\nL'API s'authentifie par un jeton d'API Ciklik (jeton opaque, ce n'est pas un JWT) envoyé dans l'en-tête `Authorization: Bearer`.\n\nExemple :\n  ```curl\n  curl --location 'https://{environment}.ciklik.co/api/v3/whoiam' --header 'Authorization: Bearer <Ciklik Token>'\n  ```\n\nUne requête sans jeton ou avec un jeton invalide reçoit `401` ; un jeton valide qui n'a pas accès à la ressource reçoit `403`.\n## Request Limit\nLe nombre de requêtes est limité à 200 par minute, compté par adresse IP (toutes les requêtes émises depuis la même adresse IP partagent ce quota). Si la limite est atteinte, la réponse http sera `429 Too Many Requests`.\n## Filtres\nCertains endpoints de l'API prennent en charge le filtrage des résultats sur un ensemble spécifié de champs. Chaque endpoint qui prend en charge le filtrage énumérera les champs qui peuvent être filtrés. Plusieurs champs peuvent être combinés en utilisant un caractère esperluette &\n\nExemple: `/subscriptions?filter[activated]=1&filter[created_at_after]=2026-01-01&sort=-created_at`\n\nUn filtre ou un tri qui n'est pas dans la liste de l'endpoint est refusé avec une réponse `400 Bad Request` (les endpoints qui valident eux-mêmes le paramètre `sort` répondent `422` pour un tri hors liste). Une valeur de filtre au mauvais format peut être refusée en `422`.\n## Pagination\nLes listes de résultats de l'API sont paginées. La pagination est fixe : 20 éléments par page, quelle que soit la valeur d'un éventuel paramètre `per_page` (ignoré). Vous pouvez obtenir les différentes pages avec la query string `page`, default value `1`.\n\nLe nombre total d'éléments dans une liste est disponible dans le champ `meta.total`.\n\nExemple: `?page=2`\n"
 
 tags:
   - name: tenant
@@ -40,6 +40,7 @@ paths:
   /whoiam:
     get:
       summary: Récupérer les données de l'entité "Website"
+      description: Renvoie le site du jeton, enveloppé dans `data`. Le champ `metadata` contient toutes les clés de métadonnées du site, y compris celles qui n'ont pas été posées par l'API.
       tags:
         - tenant
       security:
@@ -52,14 +53,14 @@ paths:
               schema:
                 $ref: "#/components/schemas/WebsiteEntity"
         403:
-          description: Authentification requise
+          description: Accès interdit
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         429:
           $ref: '#/components/responses/TooManyRequests'
     put:
       summary: Mettre à jour les métadonnées d'un site web (WebsiteEntity)
-      description: Permet de mettre à jour les métadonnées d'un site web (WebsiteEntity) en modifiant ou ajoutant des clés/valeurs au champ "metadata".
+      description: Permet de mettre à jour les métadonnées d'un site web (WebsiteEntity) en modifiant ou ajoutant des clés/valeurs au champ "metadata". Les clés envoyées sont fusionnées avec les métadonnées existantes ; les clés absentes du corps sont conservées (elles ne sont pas effacées). La réponse renvoie le site complet, enveloppé dans `data`.
       tags:
         - tenant
       security:
@@ -74,10 +75,11 @@ paths:
                 metadata:
                   type: object
                   additionalProperties:
-                    type: string
+                    type: [string, "null"]
                     maxLength: 5000
                   description: |
-                    Métadonnées personnalisées. Les valeurs doivent être des chaînes de caractères (max 5000 caractères).
+                    Métadonnées personnalisées. Les valeurs doivent être des chaînes de caractères (max 5000 caractères) ou null.
+                    Seules les clés envoyées sont modifiées, les autres clés du site sont conservées.
                     Les clés commençant par "ciklik_encrypted_" seront automatiquement encryptées.
               example:
                 metadata:
@@ -98,9 +100,36 @@ paths:
               schema:
                 $ref: "#/components/schemas/ValidationError"
         403:
-          description: Authentification requise
+          description: Accès interdit
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
+        429:
+          $ref: '#/components/responses/TooManyRequests'
+  /installation:
+    get:
+      operationId: getInstallation
+      summary: Récupérer l'état d'installation de l'espace
+      description: |
+        Route destinée au back-office du module PrestaShop : elle renvoie l'état d'installation de l'espace du jeton (espace de test ou de production, étapes franchies, ce qui reste à faire et adresse de la page de suivi d'installation).
+        Les libellés sont traduits dans la langue de la requête. L'état est lu tel qu'il a été relevé lors des dernières vérifications : aucune vérification n'est lancée pendant la requête.
+      tags:
+        - tenant
+      security:
+        - bearerAuth: [ ]
+      responses:
+        200:
+          description: Réponse réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/InstallationState"
+        401:
+          description: Authentification requise (jeton absent ou invalide)
+        403:
+          description: Accès interdit
         429:
           $ref: '#/components/responses/TooManyRequests'
   /products:
@@ -155,7 +184,12 @@ paths:
           example: "produit-exemple"
         - name: filter[virtual_product]
           in: query
-          description: Filtrer par produit virtuel
+          description: Filtrer par produit virtuel (correspondance exacte)
+          schema:
+            type: boolean
+        - name: filter[salable]
+          in: query
+          description: Filtrer par produit vendable
           schema:
             type: boolean
         - name: filter[gift_card]
@@ -165,12 +199,12 @@ paths:
             type: boolean
         - name: filter[gift_plan]
           in: query
-          description: Filtrer par plan cadeau
+          description: Filtrer par plan cadeau (UUID du plan, correspondance partielle)
           schema:
             type: string
         - name: filter[disable_seo]
           in: query
-          description: Filtrer par désactivation SEO
+          description: Filtrer par désactivation SEO (correspondance exacte)
           schema:
             type: boolean
         - name: filter[ref]
@@ -185,7 +219,7 @@ paths:
             type: boolean
         - name: sort
           in: query
-          description: "Trier les résultats (ex: -name pour un tri descendant)"
+          description: "Trier les résultats (ex: -name pour un tri descendant). Tri par défaut : `-id` (plus récent en premier)."
           schema:
             type: string
             enum:
@@ -196,7 +230,13 @@ paths:
               - price
               - active
               - slug
+              - virtual_product
+              - salable
+              - gift_card
+              - gift_plan
+              - disable_seo
               - ref
+              - composable
               - created_at
               - updated_at
               - -id
@@ -206,7 +246,13 @@ paths:
               - -price
               - -active
               - -slug
+              - -virtual_product
+              - -salable
+              - -gift_card
+              - -gift_plan
+              - -disable_seo
               - -ref
+              - -composable
               - -created_at
               - -updated_at
         - name: page
@@ -216,7 +262,7 @@ paths:
             type: integer
         - name: per_page
           in: query
-          description: Nombre d'éléments par page
+          description: Ignoré. La pagination est fixe à 20 éléments par page.
           schema:
             type: integer
       responses:
@@ -245,13 +291,22 @@ paths:
                   meta:
                     $ref: "#/components/schemas/PaginationMeta"
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         403:
-          description: Authentification requise
+          description: Accès interdit
         429:
           $ref: '#/components/responses/TooManyRequests'
     post:
       summary: Créer ou mettre à jour un produit
+      description: |
+        Crée le produit, ou le met à jour s'il existe déjà. Le produit est cherché par `external_id` s'il est fourni, sinon par `ref`.
+
+        Deux formes de corps sont acceptées :
+        - un produit seul (champs à la racine) : la réponse contient le produit dans `data`, avec le statut `201` s'il vient d'être créé et `200` s'il a été mis à jour ;
+        - un lot `{"products": [...]}` : chaque élément suit le schéma d'un produit seul, la réponse contient la liste des produits dans `data` avec le statut `200`.
+
+        À chaque enregistrement par cette route, le `slug` du produit est remplacé par un identifiant aléatoire (la valeur envoyée est ignorée) et `meta_title` reprend `name`.
+        Si `description` est absente, un produit existant garde la sienne et un nouveau produit en reçoit une vide.
       tags:
         - products
       security:
@@ -261,10 +316,33 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ProductEntityCreation"
+              oneOf:
+                - $ref: "#/components/schemas/ProductEntityCreation"
+                - type: object
+                  description: Création ou mise à jour en lot
+                  required:
+                    - products
+                  properties:
+                    products:
+                      type: array
+                      items:
+                        $ref: "#/components/schemas/ProductEntityCreation"
       responses:
         200:
-          description: Produit créé ou mis à jour avec succès
+          description: Produit mis à jour (corps unitaire), ou lot traité (corps `products`, `data` est alors une liste)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/ProductEntity"
+                      - type: array
+                        items:
+                          $ref: "#/components/schemas/ProductEntity"
+        201:
+          description: Produit créé (corps unitaire uniquement)
           content:
             application/json:
               schema:
@@ -279,9 +357,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ValidationError"
         403:
-          description: Authentification requise
+          description: Accès interdit
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         429:
           $ref: '#/components/responses/TooManyRequests'
   /products/{ref}:
@@ -309,15 +387,18 @@ paths:
                   data:
                     $ref: "#/components/schemas/ProductEntity"
         403:
-          description: Authentification requise
+          description: Accès interdit
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         404:
           description: Produit non trouvé
         429:
           $ref: '#/components/responses/TooManyRequests'
     patch:
       summary: Mettre à jour un produit par référence (SKU)
+      description: |
+        Met à jour le produit dont la référence est dans le chemin. Si `external_id` est fourni dans le corps, le produit est cherché par `external_id` et la référence du chemin est ignorée.
+        `name`, `ref` et `price` sont obligatoires, même pour une mise à jour partielle.
       tags:
         - products
       security:
@@ -341,7 +422,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProductEntity"
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ProductEntity"
+        404:
+          description: Produit non trouvé (par référence du chemin, ou par `external_id` s'il est fourni)
         422:
           description: Erreur de validation
           content:
@@ -349,15 +435,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/ValidationError"
         403:
-          description: Authentification requise
+          description: Accès interdit
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         429:
           $ref: '#/components/responses/TooManyRequests'
   /webhooks:
     get:
       summary: Lister les derniers webhooks envoyés
-      description: Renvoie les trois derniers webhooks envoyés pour cet évènement, du plus récent au plus ancien. Chaque élément est la charge utile envoyée.
+      description: Renvoie les trois derniers webhooks envoyés pour cet évènement, du plus récent au plus ancien. Chaque élément est la charge utile (payload) envoyée. Un `event_type` absent ou inconnu répond 404.
       tags:
         - webhooks
       security:
@@ -403,21 +489,18 @@ paths:
                       type: object
                       additionalProperties: true
         404:
-          description: Nom d'évènement inconnu
-        422:
-          description: Erreur de validation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ValidationError"
+          description: Paramètre `event_type` absent ou nom d'évènement inconnu
         403:
-          description: Authentification requise
+          description: Accès interdit
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         429:
           $ref: '#/components/responses/TooManyRequests'
     post:
       summary: Ajouter un webhook
+      description: |
+        Enregistre l'adresse appelée pour un type d'évènement. Il n'y a qu'une adresse par type d'évènement : un nouvel enregistrement remplace l'adresse précédente pour ce type, y compris celle posée par le module PrestaShop.
+        La réponse renvoie le site, enveloppé dans `data`, avec la liste des webhooks actifs.
       tags:
         - webhooks
       security:
@@ -452,30 +535,33 @@ paths:
                     - updated_optin
                 hook_url:
                   type: string
+                  format: uri
+                  description: URL http ou https publique, joignable depuis internet. Les adresses internes, privées ou réservées (localhost, 10.x, 192.168.x, 169.254.x...) sont refusées en 422.
               required:
                 - hook_url
                 - event_type
       responses:
         200:
-          description: Webhook ajouté avec succès
+          description: Webhook ajouté avec succès (site enveloppé dans `data`)
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/WebsiteEntity"
         422:
-          description: Erreur de validation
+          description: Erreur de validation (`event_type` inconnu, `hook_url` absente, mal formée ou non publique)
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ValidationError"
         403:
-          description: Authentification requise
+          description: Accès interdit
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         429:
           $ref: '#/components/responses/TooManyRequests'
     delete:
       summary: Supprimer un webhook
+      description: Retire l'adresse enregistrée pour ce type d'évènement. La réponse renvoie le site, enveloppé dans `data`.
       tags:
         - webhooks
       security:
@@ -524,9 +610,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ValidationError"
         403:
-          description: Authentification requise
+          description: Accès interdit
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         429:
           $ref: '#/components/responses/TooManyRequests'
   /subscriptions/{id}:
@@ -553,16 +639,10 @@ paths:
                 properties:
                   data:
                     $ref: '#/components/schemas/SubscriptionEntity'
-        422:
-          description: Erreur de validation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ValidationError"
         403:
-          description: Authentification requise
+          description: Accès interdit
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         404:
           description: Abonnement introuvable
         429:
@@ -573,7 +653,11 @@ paths:
       security:
         - bearerAuth: [ ]
       summary: Mettre à jour un abonnement
-      description: Permet de mettre à jour un abonnement, le résilier, le mettre en pause pour 1, 2 ou 3 mois, ou le relancer.
+      description: |
+        Permet de mettre à jour un abonnement, le résilier, le mettre en pause pour 1, 2 ou 3 mois, ou le relancer.
+        L'adresse (`address_id`), le transporteur (`transporter`) et la déclinaison (`declinaison_id`) sont contrôlés avant toute écriture : une référence inconnue ou qui n'appartient pas au site répond 404 et l'abonnement n'est pas modifié.
+        Les autres refus (422 sur `content` ou `next_billing`, par exemple) peuvent intervenir après l'application des changements qui les précèdent : n'envoyez qu'un changement par requête si vous avez besoin d'un résultat tout ou rien.
+        La réponse renvoie l'abonnement relu après les modifications, enveloppé dans `data`.
       parameters:
         - name: id
           in: path
@@ -589,12 +673,31 @@ paths:
             schema:
               type: object
               properties:
+                address_id:
+                  type: integer
+                  description: ID d'une adresse du site à affecter à l'abonnement (404 si elle n'appartient pas au site).
+                declinaison_id:
+                  type: integer
+                  description: ID d'une déclinaison du site à affecter à l'abonnement (404 si elle n'appartient pas au site).
+                transporter:
+                  type: integer
+                  description: ID d'un transporteur du site (404 s'il n'appartient pas au site). Peut être accompagné d'un objet `relay` décrivant le point relais choisi.
+                relay:
+                  type: object
+                  additionalProperties: true
+                  description: Point relais, lu uniquement avec `transporter`.
+                voucher:
+                  type: boolean
+                  description: Si vrai, applique l'offre de rétention (bon de réduction) proposée au désabonnement.
+                break:
+                  type: boolean
+                  description: Accepté par la validation, sans effet (la mise en pause passe par `pause` et `months`).
                 months:
                   type: number
                   format: float
                   minimum: 1
                   maximum: 3
-                  description: Nombre de mois pour mettre en pause l'abonnement (1, 2 ou 3 mois) (!= résiliation).
+                  description: Nombre de mois pour mettre en pause l'abonnement (1, 2 ou 3 mois) (!= résiliation). Obligatoire si `pause` vaut true.
                 active:
                   type: boolean
                   description: Indique si l'abonnement est actif.
@@ -607,34 +710,57 @@ paths:
                   description: Indique si l'abonnement doit être mis en pause.
                 next_billing:
                   type: string
-                  description: Modifier la date du prochain paiement
+                  format: date
+                  description: Modifier la date du prochain paiement (date postérieure à aujourd'hui). Refusé en 422 si une commande du cycle est en attente avec une relance programmée.
                 content:
                   type: array
                   description: nouveau contenu de l'abonnement, via external_id
                   items:
                     type: object
+                    required:
+                      - external_id
+                      - quantity
+                      - interval
+                      - interval_count
                     properties:
                       external_id:
-                        type: string
-                        description: Identifiant externe du produit
+                        type: [string, integer]
+                        maxLength: 255
+                        description: Identifiant externe du produit, chaîne ou entier (255 caractères max). Les identifiants PrestaShop au format `produit:déclinaison` sont acceptés.
                       quantity:
                         type: integer
+                        minimum: 1
                         description: Quantité du produit
                       interval:
                         type: string
-                        description: Intervalle de renouvellement
-                        enum:
-                          - month
-                          - week
-                          - day
+                        description: Intervalle de renouvellement (`month`, `week` ou `day` attendus ; la valeur n'est pas contrôlée)
                       interval_count:
                         type: integer
+                        minimum: 1
                         description: Nombre d'intervalles
                     example:
                       external_id: "123"
                       quantity: 1
                       interval: month
                       interval_count: 1
+                interval:
+                  type: string
+                  description: Nouvel intervalle de renouvellement (`month`, `week` ou `day`), lu seulement avec `interval_count`.
+                interval_count:
+                  type: integer
+                  description: Nouveau nombre d'intervalles, lu seulement avec `interval`.
+                upsells:
+                  type: array
+                  description: Produits complémentaires (PrestaShop) enregistrés dans l'empreinte du panier de l'abonnement.
+                  items:
+                    type: object
+                    properties:
+                      product_id:
+                        type: integer
+                      product_attribute_id:
+                        type: integer
+                      quantity:
+                        type: integer
                 metadata:
                   type: object
                   additionalProperties:
@@ -662,11 +788,11 @@ paths:
                     $ref: '#/components/schemas/SubscriptionEntity'
 
         401:
-          description: Non autorisé - L'authentification est requise.
+          description: Authentification requise (jeton absent ou invalide)
         403:
-          description: Interdit - Accès non autorisé.
+          description: Accès interdit
         404:
-          description: Non trouvé - Abonnement non trouvé.
+          description: Abonnement introuvable, ou adresse, transporteur ou déclinaison qui n'appartient pas au site.
         422:
           description: Erreur de validation
           content:
@@ -707,9 +833,9 @@ paths:
                         type: boolean
                         example: true
         401:
-          description: Non autorisé - L'authentification est requise.
+          description: Authentification requise (jeton absent ou invalide)
         403:
-          description: Interdit - Accès non autorisé.
+          description: Accès interdit
         404:
           description: Non trouvé - Abonnement introuvable ou n'appartenant pas au tenant authentifié.
         422:
@@ -769,17 +895,19 @@ paths:
                   data:
                     $ref: '#/components/schemas/SubscriptionEntity'
         401:
-          description: Non autorisé - L'authentification est requise.
+          description: Authentification requise (jeton absent ou invalide)
         403:
-          description: Interdit — le token doit appartenir à un Tenant
+          description: Accès interdit
         404:
           description: Abonnement ou produit introuvable
         422:
-          description: Erreur de validation (quantité invalide, produit personnalisé, abonnement inactif)
+          description: Erreur de validation (quantité invalide, produit personnalisé, abonnement inactif). Un abonnement inactif ou un produit personnalisé répond avec un corps `{message}` sans `errors`.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ValidationError"
+                oneOf:
+                  - $ref: "#/components/schemas/ValidationError"
+                  - $ref: "#/components/schemas/ErrorMessage"
         429:
           $ref: '#/components/responses/TooManyRequests'
     delete:
@@ -814,17 +942,19 @@ paths:
                   data:
                     $ref: '#/components/schemas/SubscriptionEntity'
         401:
-          description: Non autorisé - L'authentification est requise.
+          description: Authentification requise (jeton absent ou invalide)
         403:
-          description: Interdit — le token doit appartenir à un Tenant
+          description: Accès interdit
         404:
           description: Abonnement ou produit introuvable
         422:
-          description: Erreur de validation (dernier produit, produit personnalisé, abonnement inactif)
+          description: Erreur de validation (dernier produit, produit personnalisé, abonnement inactif). Un abonnement inactif ou un produit personnalisé répond avec un corps `{message}` sans `errors`.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ValidationError"
+                oneOf:
+                  - $ref: "#/components/schemas/ValidationError"
+                  - $ref: "#/components/schemas/ErrorMessage"
         429:
           $ref: '#/components/responses/TooManyRequests'
   /subscriptions/{id}/products:
@@ -837,7 +967,7 @@ paths:
       summary: Ajouter un produit à un abonnement
       description: |
         Ajoute un produit à l'abonnement ou met à jour la quantité si le produit est déjà rattaché (upsert).
-        Si le produit existe déjà en base (via son `external_id`), il est simplement rattaché — les champs `price` et `tax` du corps sont alors ignorés.
+        Si le produit existe déjà en base (via son `external_id`), il est simplement rattaché ; les champs `price` et `tax` du corps sont alors ignorés.
         Si le produit n'existe pas, il est créé automatiquement : `price` devient **obligatoire**, `tax` défaut à 0 si absent.
         Les produits avec personnalisation (customization hash) ne sont pas acceptés.
         Retourne 201 pour un nouvel attachement (nouveau produit créé ou produit existant nouvellement rattaché), 200 pour une mise à jour de quantité sur un produit déjà rattaché.
@@ -908,17 +1038,19 @@ paths:
                   data:
                     $ref: '#/components/schemas/SubscriptionEntity'
         401:
-          description: Non autorisé - L'authentification est requise.
+          description: Authentification requise (jeton absent ou invalide)
         404:
           description: Abonnement introuvable
         403:
-          description: Interdit — le token doit appartenir à un Tenant
+          description: Accès interdit
         422:
-          description: Erreur de validation (champs manquants, produit personnalisé, abonnement inactif, `price` manquant lors de la création d'un produit)
+          description: Erreur de validation (champs manquants, produit personnalisé, abonnement inactif, `price` manquant lors de la création d'un produit). Un abonnement inactif ou un produit personnalisé répond avec un corps `{message}` sans `errors`.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ValidationError"
+                oneOf:
+                  - $ref: "#/components/schemas/ValidationError"
+                  - $ref: "#/components/schemas/ErrorMessage"
         429:
           $ref: '#/components/responses/TooManyRequests'
   /subscriptions:
@@ -928,7 +1060,7 @@ paths:
       security:
         - bearerAuth: [ ]
       summary: Récupérer une liste d'abonnement
-      description: Permet de récupérer une liste d'abonnements avec différents filtres et options de tri.
+      description: Permet de récupérer une liste d'abonnements avec différents filtres et options de tri. Sans paramètre `sort`, la liste est triée par `id` croissant (plus ancien en premier).
       parameters:
         - name: filter[activated]
           in: query
@@ -1045,11 +1177,11 @@ paths:
           example: "user@example.com"
         - name: filter[plan_id]
           in: query
-          description: Filtre par ID de plan.
+          description: Filtre par ID (numérique) du plan, correspondance exacte.
           schema:
             type: string
             maxLength: 255
-          example: "plan_123"
+          example: "12"
         - name: filter[customer_id]
           in: query
           description: Filtre par ID de client.
@@ -1057,9 +1189,21 @@ paths:
             type: string
             maxLength: 255
           example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: filter[interval]
+          in: query
+          description: Filtre par intervalle de facturation (correspondance partielle, insensible à la casse).
+          schema:
+            type: string
+          example: "month"
+        - name: filter[interval_count]
+          in: query
+          description: Filtre par nombre d'intervalles (correspondance exacte).
+          schema:
+            type: integer
+          example: 1
         - name: sort
           in: query
-          description: "Trier les résultats (préfixer par - pour un tri descendant)"
+          description: "Trier les résultats (préfixer par - pour un tri descendant). Tri par défaut : `id` croissant."
           schema:
             type: string
             enum:
@@ -1132,9 +1276,9 @@ paths:
                   meta:
                     $ref: "#/components/schemas/PaginationMeta"
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         403:
-          description: Authentification requise
+          description: Accès interdit
         422:
           description: Erreur de validation
           content:
@@ -1151,7 +1295,7 @@ paths:
         - deliveries
       security:
         - bearerAuth: [ ]
-      description: Récupère la liste de tous les bons de livraison de l'application.
+      description: Récupère la liste de tous les bons de livraison de l'application. Les filtres exacts acceptent plusieurs valeurs séparées par des virgules (`filter[order_id]=12,13`).
       parameters:
         - name: filter[uuid]
           in: query
@@ -1230,9 +1374,10 @@ paths:
             type: string
         - name: filter[mail]
           in: query
-          description: Filtrer par adresse e-mail.
+          description: Filtrer par adresse e-mail (correspondance exacte).
           schema:
             type: string
+            maxLength: 255
         - name: filter[transporter_name]
           in: query
           description: Filtrer par nom du transporteur.
@@ -1250,9 +1395,9 @@ paths:
             type: string
         - name: filter[relay_id]
           in: query
-          description: Filtrer par ID du relais.
+          description: Filtrer par ID du relais (chaîne, les identifiants de point relais ne sont pas tous numériques).
           schema:
-            type: integer
+            type: string
         - name: filter[orderable_name]
           in: query
           description: Filtrer par nom de l'élément commandable.
@@ -1262,7 +1407,7 @@ paths:
           in: query
           description: Filtrer par ID de l'élément commandable.
           schema:
-            type: integer
+            type: string
         - name: filter[orderable_type]
           in: query
           description: Filtrer par type de l'élément commandable.
@@ -1440,9 +1585,9 @@ paths:
                   meta:
                     $ref: '#/components/schemas/PaginationMeta'
         401:
-          description: Non autorisé - L'authentification est requise.
+          description: Authentification requise (jeton absent ou invalide)
         403:
-          description: Interdit - Accès non autorisé.
+          description: Accès interdit
         422:
           description: Erreur de validation
           content:
@@ -1459,11 +1604,11 @@ paths:
         - deliveries
       security:
         - bearerAuth: [ ]
-      description: Récupère les détails d'un bon de livraison.
+      description: Récupère les détails d'un bon de livraison. `data` est une liste (un bon de livraison peut porter plusieurs lignes partageant le même UUID).
       parameters:
         - name: id
           in: path
-          description: ID du bon de livraison
+          description: UUID du bon de livraison (champ `uuid`, pas l'identifiant numérique `id`)
           required: true
           schema:
             type: string
@@ -1480,15 +1625,11 @@ paths:
                     items:
                       $ref: '#/components/schemas/DeliverySchema'
         401:
-          description: Non autorisé - L'authentification est requise.
+          description: Authentification requise (jeton absent ou invalide)
         403:
-          description: Interdit - Accès non autorisé.
-        422:
-          description: Erreur de validation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ValidationError"
+          description: Accès interdit
+        404:
+          description: Aucun bon de livraison du site avec cet UUID
         429:
           $ref: '#/components/responses/TooManyRequests'
     post:
@@ -1498,11 +1639,14 @@ paths:
         - deliveries
       security:
         - bearerAuth: [ ]
-      description: Permet de le considérer comme expédié, et associer un lien de suivi.
+      description: |
+        Permet de le considérer comme expédié, et associer un numéro et un lien de suivi.
+        Un `tracking_number` est enregistré sur le bon de livraison (et renvoyé dans `tracking_number`), le lien de suivi est construit à partir du transporteur et le statut passe à `shipped`.
+        La réponse renvoie les lignes du bon relues après la mise à jour, dans une liste `data`.
       parameters:
         - name: id
           in: path
-          description: ID du bon de livraison
+          description: UUID du bon de livraison (champ `uuid`, pas l'identifiant numérique `id`)
           required: true
           schema:
             type: string
@@ -1514,14 +1658,15 @@ paths:
               type: object
               properties:
                 tracking_number:
-                  type: string
+                  type: [string, "null"]
                   maxLength: 255
-                  description: Numéro de suivi à associer au bon de livraison
+                  description: Numéro de suivi à associer au bon de livraison. Il est enregistré et renvoyé dans le champ `tracking_number`.
                 notification:
                   type: boolean
-                  description: Envoyer une notification d'expédition
+                  default: false
+                  description: Facultatif. Envoyer au client la notification d'expédition avec le lien de suivi (faux par défaut). Lu uniquement avec `tracking_number`.
                 status:
-                  type: string
+                  type: [string, "null"]
                   description: Nouveau statut du BL
                   enum:
                     - created
@@ -1543,9 +1688,11 @@ paths:
                     items:
                       $ref: '#/components/schemas/DeliverySchema'
         401:
-          description: Non autorisé - L'authentification est requise.
+          description: Authentification requise (jeton absent ou invalide)
         403:
-          description: Interdit - Accès non autorisé.
+          description: Accès interdit
+        404:
+          description: Aucun bon de livraison du site avec cet UUID
         422:
           description: Erreur de validation
           content:
@@ -1561,14 +1708,14 @@ paths:
       security:
         - bearerAuth: [ ]
       summary: Supprimer un élément d'un bon de livraison
-      description: Supprime un élément du bon de livraison en utilisant son ID.
+      description: Supprime un élément du bon de livraison en utilisant son identifiant numérique `id` (et non l'UUID utilisé par GET et POST).
       parameters:
         - name: id
           in: path
-          description: ID de l'élément du bon de livraison à supprimer
+          description: Identifiant numérique (`id`) de l'élément du bon de livraison à supprimer
           required: true
           schema:
-            type: integer  # Assurez-vous que le type de données est correct
+            type: integer
       responses:
         200:
           description: Succès
@@ -1578,11 +1725,11 @@ paths:
                 data:
                   success: true
         403:
-          description: Non autorisé
+          description: Accès interdit
         401:
-          description: Non autorisé, veuillez vous authentifier
+          description: Authentification requise (jeton absent ou invalide)
         404:
-          description: Élément du bon de livraison non trouvé
+          description: Élément du bon de livraison non trouvé, ou appartenant à un autre site
         429:
           $ref: '#/components/responses/TooManyRequests'
   /orders:
@@ -1793,9 +1940,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ValidationError"
         403:
-          description: Authentification requise
+          description: Accès interdit
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         429:
           $ref: '#/components/responses/TooManyRequests'
   /orders/{id}:
@@ -1824,17 +1971,11 @@ paths:
                     $ref: '#/components/schemas/OrderSchema'
 
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         403:
           description: Accès interdit
         404:
           description: La commande n'a pas été trouvée
-        422:
-          description: Erreur de validation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
         429:
           $ref: '#/components/responses/TooManyRequests'
   /addresses:
@@ -2015,11 +2156,9 @@ paths:
                   meta:
                     $ref: '#/components/schemas/PaginationMeta'
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         403:
           description: Accès interdit
-        404:
-          description: L'adresse n'a pas été trouvée
         422:
           description: Erreur de validation
           content:
@@ -2116,7 +2255,7 @@ paths:
                   data:
                     $ref: '#/components/schemas/Address'
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         403:
           description: Accès interdit (jeton qui n'est pas celui d'un site)
         404:
@@ -2162,7 +2301,7 @@ paths:
                   type: string
                   maxLength: 32
                 address1:
-                  type: string
+                  type: [string, "null"]
                   maxLength: 32
                 postcode:
                   type: string
@@ -2177,7 +2316,7 @@ paths:
                   type: string
                   maxLength: 255
                 company_name:
-                  type: string
+                  type: [string, "null"]
                   maxLength: 255
                 phone:
                   type: string
@@ -2185,7 +2324,7 @@ paths:
                 region_id:
                   type: integer
                 division:
-                  type: string
+                  type: [string, "null"]
                   maxLength: 10
                   description: Code de subdivision (état/province). Requis pour les États-Unis.
       responses:
@@ -2199,7 +2338,7 @@ paths:
                   data:
                     $ref: '#/components/schemas/Address'
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         403:
           description: Accès interdit
         404:
@@ -2237,17 +2376,11 @@ paths:
                   data:
                     $ref: '#/components/schemas/Address'
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         403:
           description: Accès interdit
         404:
           description: L'adresse n'a pas été trouvée
-        422:
-          description: Erreur de validation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
         429:
           $ref: '#/components/responses/TooManyRequests'
     delete:
@@ -2256,7 +2389,7 @@ paths:
         - addresses
       security:
         - bearerAuth: [ ]
-      description: Cette route permet de supprimer une adresse.
+      description: Cette route permet de supprimer une adresse. Une adresse qui n'est pas supprimable (champ `deletable` à false) répond 403.
       parameters:
         - in: path
           name: id
@@ -2273,17 +2406,11 @@ paths:
                 data:
                   success: true
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         403:
-          description: Accès interdit
+          description: Adresse non supprimable (champ `deletable` à false), ou accès interdit
         404:
           description: L'adresse n'a pas été trouvée
-        422:
-          description: Erreur de validation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
         429:
           $ref: '#/components/responses/TooManyRequests'
   /customers:
@@ -2402,7 +2529,7 @@ paths:
                   meta:
                     $ref: '#/components/schemas/PaginationMeta'
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         403:
           description: Accès interdit
         422:
@@ -2417,7 +2544,7 @@ paths:
       summary: Créer un nouvel utilisateur
       tags:
         - customers
-      description: Cette route permet de créer un nouveau compte utilisateur. Si l'adresse email existe, la réponse contiendra l'utilisateur associé. Dans le cas contraire, le compte est créé, et le compte créé se trouve dans la réponse.
+      description: Cette route permet de créer un nouveau compte utilisateur. Si l'adresse email existe déjà sur le site, la réponse contient l'utilisateur associé (statut 200, `external_id` n'est pas modifié). Dans le cas contraire, le compte est créé et renvoyé (statut 201). Le client est enveloppé dans `data`.
       security:
         - bearerAuth: [ ]
       requestBody:
@@ -2433,20 +2560,33 @@ paths:
                   description: Adresse e-mail de l'utilisateur
                   example: user@example.com
                 external_id:
-                  type: string
-                  description: Identifiant externe optionnel à enregistrer
+                  type: [string, integer, "null"]
+                  maxLength: 255
+                  description: Identifiant externe facultatif à enregistrer (chaîne ou entier, 255 caractères max), utilisé seulement à la création
                   example: some_external_id
               required:
                 - email
       responses:
         200:
-          description: Création réussie
+          description: Le client existait déjà sur le site, il est renvoyé tel quel
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserSchema'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/UserSchema'
+        201:
+          description: Client créé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/UserSchema'
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         403:
           description: Accès interdit
         422:
@@ -2467,29 +2607,27 @@ paths:
       parameters:
         - name: id
           in: path
-          description: ID ou UUID de l'utilisateur
+          description: UUID de l'utilisateur (l'identifiant numérique n'est pas accepté)
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         200:
           description: Succès
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserSchema'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/UserSchema'
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         403:
           description: Accès interdit
         404:
           description: La ressource n'a pas été trouvée
-        422:
-          description: Erreur de validation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
         429:
           $ref: '#/components/responses/TooManyRequests'
   /transactions:
@@ -2500,6 +2638,52 @@ paths:
       security:
         - bearerAuth: [ ]
       parameters:
+        - name: filter[order_id]
+          in: query
+          description: Filtrer par ID de la commande.
+          schema:
+            type: integer
+          example: 456
+        - name: filter[gateway]
+          in: query
+          description: Filtrer par passerelle de paiement.
+          schema:
+            type: string
+          example: "stripe"
+        - name: filter[transaction_id]
+          in: query
+          description: Filtrer par identifiant de la transaction.
+          schema:
+            type: string
+          example: "ch_123456"
+        - name: filter[detail]
+          in: query
+          description: Filtrer par détail de la transaction (correspondance exacte).
+          schema:
+            type: string
+        - name: filter[token]
+          in: query
+          description: Filtrer par jeton de la transaction.
+          schema:
+            type: string
+        - name: filter[paid]
+          in: query
+          description: Filtrer par transactions payées.
+          schema:
+            type: boolean
+          example: true
+        - name: filter[amount]
+          in: query
+          description: Filtrer par montant (correspondance exacte).
+          schema:
+            type: number
+          example: 29.99
+        - name: filter[refunded]
+          in: query
+          description: Filtrer par transactions remboursées.
+          schema:
+            type: boolean
+          example: false
         - name: filter[user_id]
           in: query
           description: Filtrer par ID de l'utilisateur.
@@ -2670,7 +2854,7 @@ paths:
                   meta:
                     $ref: '#/components/schemas/PaginationMeta'
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         403:
           description: Accès interdit
         404:
@@ -2694,7 +2878,7 @@ paths:
         - name: transaction_id
           in: path
           required: true
-          description: L'identifiant de la transaction à récupérer.
+          description: L'identifiant de la transaction à récupérer (champ `transaction_id`).
           schema:
             type: string
       responses:
@@ -2703,23 +2887,23 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TransactionSchema'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TransactionSchema'
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         403:
           description: Accès interdit
         404:
           description: La ressource n'a pas été trouvée
-        422:
-          description: Erreur de validation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
         429:
           $ref: '#/components/responses/TooManyRequests'
     put:
       summary: Demander le remboursement d'une transaction par ID
+      description: |
+        Rembourse tout ou partie d'une transaction payée. La réponse renvoie la transaction, enveloppée dans `data`.
+        Un remboursement refusé (transaction échouée, montant supérieur au restant, solde insuffisant, refus de Stripe) répond 422 avec le motif dans `errors.error`. Un refus d'une autre passerelle peut répondre 500.
       tags:
         - transactions
       security:
@@ -2750,19 +2934,27 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TransactionSchema'
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TransactionSchema'
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         403:
           description: Accès interdit
         404:
           description: La ressource n'a pas été trouvée
         422:
-          description: Erreur de validation
+          description: Erreur de validation du montant (`errors.amount`), ou remboursement refusé (motif dans `errors.error`)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+              example:
+                message: Vous ne pouvez pas rembourser une transaction échouée.
+                errors:
+                  error:
+                    - Vous ne pouvez pas rembourser une transaction échouée.
         429:
           $ref: '#/components/responses/TooManyRequests'
   /kpis:
@@ -2933,7 +3125,7 @@ paths:
                   meta:
                     $ref: '#/components/schemas/PaginationMeta'
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         403:
           description: Accès interdit
         404:
@@ -3015,6 +3207,8 @@ paths:
               - -error_code
               - created_at
               - -created_at
+              - updated_at
+              - -updated_at
         - name: page
           in: query
           description: Numéro de la page pour la pagination
@@ -3046,7 +3240,7 @@ paths:
                   meta:
                     $ref: '#/components/schemas/PaginationMeta'
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         403:
           description: Accès interdit
         422:
@@ -3084,17 +3278,11 @@ paths:
                   data:
                     $ref: '#/components/schemas/RebillErrorLogsSchema'
         401:
-          description: Accès non autorisé
+          description: Authentification requise (jeton absent ou invalide)
         403:
           description: Accès interdit
         404:
           description: L'erreur de rebill n'a pas été trouvée
-        422:
-          description: Erreur de validation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
         429:
           $ref: '#/components/responses/TooManyRequests'
 components:
@@ -3102,19 +3290,18 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: JWT
-      description: Utilisez un jeton d'authentification pour accéder à cette ressource
+      description: "Jeton d'API Ciklik (jeton opaque, pas un JWT), envoyé dans l'en-tête `Authorization: Bearer <jeton>`."
   headers:
     X-RateLimit-Limit:
-      description: Nombre maximum de requêtes autorisées par minute.
+      description: Nombre maximum de requêtes autorisées par minute et par adresse IP.
       schema:
         type: integer
-        example: 100
+        example: 200
     X-RateLimit-Remaining:
       description: Nombre de requêtes restantes dans la fenêtre courante.
       schema:
         type: integer
-        example: 95
+        example: 195
     Retry-After:
       description: Nombre de secondes avant la réinitialisation de la fenêtre de rate limiting.
       schema:
@@ -3122,7 +3309,7 @@ components:
         example: 60
   responses:
     TooManyRequests:
-      description: Rate limit atteint - 100 requêtes par minute maximum.
+      description: Limite de débit atteinte (200 requêtes par minute, comptées par adresse IP).
       headers:
         X-RateLimit-Limit:
           $ref: '#/components/headers/X-RateLimit-Limit'
@@ -3143,7 +3330,7 @@ components:
           type: integer
           description: L'identifiant de la commande.
         order:
-          $ref: '#/components/schemas/OrderSchema'
+          $ref: '#/components/schemas/TransactionOrderSchema'
         gateway:
           type: string
           description: La passerelle de paiement utilisée.
@@ -3200,9 +3387,61 @@ components:
         payment_intent_id:
           type: string
           description: L'identifiant de l'intention de paiement associée à la transaction.
+    TransactionOrderSchema:
+      type: object
+      description: >
+        Commande détaillée de la transaction. Elle diffère de la commande renvoyée par /orders : mêmes champs de base
+        (order_id, user_id, user_uuid, first_name, last_name, phone, email, status, created, items, shipping, count,
+        total_tax_paid, total_discount_inc, total_paid, total_shipping_paid, created_at, coupon, subscription_uuid,
+        retry_link, paid_transaction_id, paid_class_key, prestashop_order_id), sans `updated_at`, avec des articles
+        au format interne et des statistiques client et abonnement en plus.
+      additionalProperties: true
+      properties:
+        order_id:
+          type: integer
+          description: ID de la commande
+        status:
+          type: string
+          description: Statut de la commande
+        items:
+          type: array
+          description: Articles de la commande
+          items:
+            type: object
+            additionalProperties: true
+        revenue:
+          type: [string, 'null']
+          description: Revenu de l'abonnement (payé moins remboursé), chaîne formatée, null hors abonnement
+        refunded:
+          type: [string, 'null']
+          description: Montant remboursé sur l'abonnement, chaîne formatée, null hors abonnement
+        customerRevenue:
+          type: string
+          description: Revenu du client (payé moins remboursé), chaîne formatée avec séparateur de milliers
+        customerRefund:
+          type: string
+          description: Montant remboursé au client, chaîne formatée avec séparateur de milliers
+        totalTransactionsSuccess:
+          type: integer
+          description: Nombre de transactions réussies du client
+        subTransactionsSuccess:
+          type: [integer, 'null']
+          description: Nombre de transactions payées sur l'abonnement
+        next_billing:
+          type: [string, 'null']
+          format: date-time
+          description: Prochaine échéance de l'abonnement lié
+        countTransactions:
+          type: integer
+          description: Nombre de transactions de la commande
+        choices:
+          description: Choix de l'abonnement lié, null hors abonnement
     DeliverySchema:
       type: object
       properties:
+        tenant_id:
+          type: integer
+          description: ID du site.
         id:
           type: integer
           description: ID du bon de livraison.
@@ -3219,6 +3458,10 @@ components:
           type: string
           format: date-time
           description: Date de création du bon de livraison.
+        updated_at:
+          type: string
+          format: date-time
+          description: Date de dernière mise à jour du bon de livraison.
         scheduled_at:
           type: string
           format: date-time
@@ -3251,9 +3494,12 @@ components:
         customer_id:
           type: string
           description: ID du client.
-        supply_transporter_reference:
-          type: string
-          description: ID de la fourniture.
+        supply_id:
+          type: [string, "null"]
+          description: Référence du transporteur chez le logisticien (filtrable et triable sous le nom `transporter_reference`).
+        transporter_id:
+          type: [integer, "null"]
+          description: ID du transporteur.
         first_name:
           type: string
           description: Prénom du destinataire.
@@ -3300,10 +3546,11 @@ components:
           type: string
           description: Code ISO du pays.
         relay:
-          type: string
-          description: Relais de livraison.
+          type: [object, "null"]
+          additionalProperties: true
+          description: Point relais de livraison, null sans point relais.
         relay_id:
-          type: integer
+          type: [string, "null"]
           description: ID du relais de livraison.
         orderable_name:
           type: string
@@ -3400,6 +3647,122 @@ components:
               additionalProperties:
                 type: string
 
+    InstallationState:
+      type: object
+      description: État d'installation de l'espace, tel qu'affiché dans le back-office du module PrestaShop.
+      properties:
+        space:
+          type: object
+          properties:
+            id:
+              type: integer
+              description: Identifiant de l'espace (site).
+            name:
+              type: string
+              description: Nom de l'espace.
+            domain:
+              type: string
+              description: Domaine de l'espace.
+            kind:
+              type: string
+              enum:
+                - sandbox
+                - production
+              description: Espace de test (sandbox) ou de production.
+        complete:
+          type: boolean
+          description: Vrai quand toutes les étapes applicables sont franchies.
+        stalled:
+          type: boolean
+          description: Vrai quand l'installation est en pause (aucune nouvelle étape franchie depuis soixante jours alors qu'il reste quelque chose à faire).
+        collision:
+          type: [object, "null"]
+          description: Autre espace déclaré avec la même adresse de boutique, null s'il n'y en a pas.
+          properties:
+            normalized_host:
+              type: string
+            current_tenant_id:
+              type: integer
+            current_is_sandbox:
+              type: boolean
+            other_tenant_id:
+              type: integer
+            other_tenant_name:
+              type: string
+            other_tenant_domain:
+              type: string
+            other_is_sandbox:
+              type: boolean
+        counts:
+          type: object
+          properties:
+            done:
+              type: integer
+              description: Nombre d'étapes franchies.
+            broken:
+              type: integer
+              description: Nombre d'étapes bloquées.
+            upcoming:
+              type: integer
+              description: Nombre d'étapes restant à faire.
+        summary:
+          type: string
+          description: Résumé traduit de l'état d'installation.
+        last_probed_at:
+          type: [string, "null"]
+          format: date-time
+          description: Date de la dernière vérification (ISO 8601), null si aucune vérification n'a encore eu lieu.
+        steps:
+          type: array
+          description: Étapes applicables à l'espace.
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+                description: Clé de l'étape.
+              group:
+                type: string
+                enum:
+                  - site
+                  - email
+                description: Groupe de l'étape.
+              label:
+                type: string
+                description: Libellé traduit de l'étape.
+              state:
+                type: string
+                enum:
+                  - verified
+                  - in_progress
+                  - todo
+                  - claimed_not_observed
+                  - broken
+                  - not_applicable
+                  - unverified
+                description: État affiché de l'étape.
+              state_label:
+                type: string
+                description: Libellé traduit de l'état.
+              is_blocking:
+                type: boolean
+                description: Vrai si l'étape conditionne la mise en ligne de l'espace (étapes du groupe site ; le groupe email ne bloque rien).
+              observed_at:
+                type: [string, "null"]
+                format: date-time
+                description: Date à laquelle l'état a été observé (ISO 8601).
+        remaining:
+          type: array
+          description: Clés des étapes qui restent à faire.
+          items:
+            type: string
+        tracking_url:
+          type: string
+          description: Adresse de la page de suivi d'installation.
+        tracking_url_valid_until:
+          type: [string, "null"]
+          format: date-time
+          description: Date de fin de validité de l'adresse de suivi (ISO 8601), null si elle n'expire pas.
     PaymentMethodEntity:
       type: object
       properties:
@@ -3456,27 +3819,27 @@ components:
               description: La date de mise à jour de la liaison au format ISO 8601
     ProductEntityUpdate:
       type: object
+      description: Champs acceptés par PATCH /products/{ref}. Tout autre champ est ignoré.
       properties:
         name:
           type: string
           maxLength: 255
+        ref:
+          type: string
+          maxLength: 255
+          description: Référence du produit (SKU).
+        external_id:
+          type: string
+          maxLength: 255
+          description: Identifiant du produit chez le vendeur connecté (identifiant de déclinaison pour PrestaShop).
         slug:
           type: string
           maxLength: 255
-        position:
-          type: integer
-        short_description:
-          type: string
-          maxLength: 255
+          description: Slug du produit.
         description:
           type: string
           maxLength: 255
-        meta_title:
-          type: string
-          maxLength: 255
-        meta_description:
-          type: string
-          maxLength: 255
+          description: Facultative.
         id_category:
           type: integer
         quantity:
@@ -3497,22 +3860,13 @@ components:
           type: boolean
         virtual_product:
           type: boolean
-        salable:
-          type: boolean
-        gift_card:
-          type: boolean
-        gift_plan:
-          type: string
-        disable_seo:
-          type: boolean
-        ref:
-          type: string
-        external_id:
-          type: string
         frequencies:
           type: array
           items:
             type: object
+            required:
+              - interval
+              - interval_count
             properties:
               interval:
                 type: string
@@ -3523,11 +3877,14 @@ components:
               interval_count:
                 type: integer
                 minimum: 1
-                maximum: 3
+                maximum: 28
+      required:
+        - name
+        - ref
+        - price
       example:
         ref: "REFABOPRODUIT"
         name: "Super nom produit"
-        slug: "slug-de-produit"
         price: "17.50"
         description: "Petite description produit"
         tax: "0.2"
@@ -3536,27 +3893,27 @@ components:
             interval_count: 2
     ProductEntityCreation:
       type: object
+      description: Champs acceptés par POST /products. Tout autre champ est ignoré.
       properties:
         name:
           type: string
           maxLength: 255
+        ref:
+          type: string
+          maxLength: 255
+          description: Référence du produit (SKU).
+        external_id:
+          type: string
+          maxLength: 255
+          description: Identifiant du produit chez le vendeur connecté (identifiant de déclinaison pour PrestaShop).
         slug:
           type: string
           maxLength: 255
-        position:
-          type: integer
-        short_description:
-          type: string
-          maxLength: 255
+          description: "Ignoré : un slug aléatoire est attribué à chaque enregistrement par POST /products."
         description:
           type: string
           maxLength: 255
-        meta_title:
-          type: string
-          maxLength: 255
-        meta_description:
-          type: string
-          maxLength: 255
+          description: Facultative. Recopiée dans la description courte et la meta description du produit.
         id_category:
           type: integer
         quantity:
@@ -3577,22 +3934,13 @@ components:
           type: boolean
         virtual_product:
           type: boolean
-        salable:
-          type: boolean
-        gift_card:
-          type: boolean
-        gift_plan:
-          type: string
-        disable_seo:
-          type: boolean
-        ref:
-          type: string
-        external_id:
-          type: string
         frequencies:
           type: array
           items:
             type: object
+            required:
+              - interval
+              - interval_count
             properties:
               interval:
                 type: string
@@ -3603,17 +3951,15 @@ components:
               interval_count:
                 type: integer
                 minimum: 1
-                maximum: 3
+                maximum: 28
       required:
         - name
         - ref
         - price
         - tax
-        - description
       example:
         ref: "REFABOPRODUIT"
         name: "Super nom produit"
-        slug: "slug-de-produit"
         price: "17.50"
         description: "Petite description produit"
         tax: "0.2"
@@ -3624,8 +3970,7 @@ components:
       type: object
       properties:
         id:
-          type: string
-          maxLength: 255
+          type: integer
         name:
           type: string
           maxLength: 255
@@ -3635,8 +3980,8 @@ components:
         position:
           type: integer
         short_description:
-          type: string
-          maxLength: 255
+          type: [string, "null"]
+          description: Description courte
         description:
           type: string
           maxLength: 255
@@ -3754,6 +4099,13 @@ components:
           type: integer
         total:
           type: integer
+    ErrorMessage:
+      type: object
+      description: Erreur sans détail par champ.
+      properties:
+        message:
+          type: string
+          description: Message d'erreur
     ValidationError:
       type: object
       properties:
@@ -3829,18 +4181,68 @@ components:
               description: Code alpha du pays.
 
     Transporter:
-      type: object
+      type: [object, "null"]
       description: Transporteur associé à la livraison.
       properties:
         id:
           type: integer
           description: ID du transporteur.
+        countries:
+          type: array
+          description: Pays desservis.
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+        plan_blacklisted:
+          type: array
+          description: Formules pour lesquelles le transporteur n'est pas proposé.
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
         name:
           type: string
           description: Nom du transporteur.
-        reference:
-          type: string
-          description: Référence du transporteur.
+        description:
+          type: [string, "null"]
+          description: Description du transporteur.
+        price:
+          type: number
+          description: Prix TTC de la livraison.
+        gift:
+          type: boolean
+          description: Proposé pour les cartes cadeaux.
+        active:
+          type: boolean
+          description: Transporteur actif.
+        shipped_count:
+          type: [integer, "null"]
+          description: Nombre d'envois du transporteur.
+        type:
+          type: [string, "null"]
+          description: Type de transporteur.
+        relayOptions:
+          type: [object, "null"]
+          description: Options de point relais (pilote et paramètres), null si le transporteur ne livre pas en point relais.
+          properties:
+            relayKey:
+              type: [string, "null"]
+            driver:
+              type: string
+              enum:
+                - MondialRelay
+                - ColissimoRelay
+                - DpdRelay
+            relayOptions:
+              type: object
+              additionalProperties: true
 
     User:
       type: object
@@ -3966,11 +4368,12 @@ components:
           format: date-time
           description: Date de mise à jour du transporteur.
         relay:
-          type: string
-          description: Relais associé à l'abonnement.
+          type: [object, 'null']
+          additionalProperties: true
+          description: Point relais associé à l'abonnement, null sans point relais.
         graceMonths:
-          type: string
-          description: Mois de grâce pour l'abonnement.
+          type: [integer, 'null']
+          description: Nombre de mois de pause (période de grâce) de l'abonnement.
 #        customerRevenue:
 #          type: string
 #          description: Revenu du client pour l'abonnement.
@@ -4044,7 +4447,7 @@ components:
           type: string
           description: uuid de l'utilisateur.
         user_id:
-          type: string
+          type: integer
           description: id de l'utilisateur.
         email:
           type: string
@@ -4066,7 +4469,10 @@ components:
             properties:
               external_id:
                 type: string
-                description: Identifiant externe du produit.
+                description: Identifiant externe du produit, sans la partie personnalisation (ce qui précède le premier `_`).
+              external_id_with_customizations:
+                type: string
+                description: Identifiant externe complet du produit, personnalisation comprise (identique à `external_id` pour un produit sans personnalisation).
               quantity:
                 type: integer
                 description: Quantité du produit.
@@ -4076,6 +4482,10 @@ components:
               subscription_id:
                 type: integer
                 description: Identifiant de l'abonnement.
+              customizations:
+                type: [array, object]
+                description: Personnalisations du produit (tableau vide pour un produit sans personnalisation).
+                items: {}
     OrderSchema:
       description: Schéma de données pour une commande
       type: object
@@ -4119,8 +4529,9 @@ components:
                 description: ID de l'article
                 type: integer
               price:
-                description: Prix HT de l'article
-                type: number
+                description: Prix HT de l'article, chaîne avec virgule décimale et deux décimales (ex. "12,50")
+                type: string
+                example: "12,50"
               tax:
                 description: Taux de TVA applicable
                 type: string
@@ -4147,29 +4558,44 @@ components:
           description: Nombre total d'articles dans la commande
           type: integer
         total_tax_paid:
-          description: Montant total des taxes payées
+          description: Montant total des taxes payées, chaîne avec virgule décimale (ex. "2,08")
           type: string
+          example: "2,08"
         total_discount_inc:
-          description: Montant total de la remise incluse
+          description: Montant total de la remise incluse, chaîne avec virgule décimale (ex. "0,00")
           type: string
+          example: "0,00"
         total_paid:
-          description: Montant total payé
-          type: string
+          description: Montant total payé, chaîne avec virgule décimale (ex. "12,50"), null si non renseigné
+          type: [string, 'null']
+          example: "12,50"
         total_shipping_paid:
-          description: Frais de livraison totaux payés
+          description: Frais de livraison totaux payés, chaîne avec virgule décimale (ex. "4,90")
           type: string
+          example: "4,90"
         created_at:
           description: Date et heure de création de la commande
           type: string
           format: date-time
         coupon:
-          description: Liste de coupons appliqués à la commande
-          type: array
+          description: Premier coupon appliqué à la commande (objet), ou tableau vide si aucun coupon
+          oneOf:
+            - type: object
+              additionalProperties: true
+            - type: array
+              maxItems: 0
         subscription_uuid:
           description: UUID de l'abonnement associé (le cas échéant)
           type: string
         next_try:
           description: Prochaine tentative (le cas échéant)
+          type: string
+          format: date-time
+        retry_link:
+          description: "Lien de reprise du paiement de la commande, null s'il n'y en a pas. Le lien connecte le client à son compte : ne pas l'afficher ni le journaliser."
+          type: [string, 'null']
+        updated_at:
+          description: Date et heure de dernière mise à jour de la commande
           type: string
           format: date-time
         paid_transaction_id:
@@ -4181,6 +4607,20 @@ components:
         prestashop_order_id:
           description: Correspondance commande PrestaShop
           type: [integer, 'null']
+        prestashop_cart_id:
+          description: Panier PrestaShop de la commande (tunnel ou renouvellement)
+          type: [integer, 'null']
+        payment_status:
+          description: >-
+            État du paiement. paid : une transaction est payée ; pending : paiement PayPal accepté mais pas encore
+            encaissé (prélèvement bancaire), la commande est terminée sans être payée ; failed : dernière transaction en
+            échec ; null : aucune transaction. Ne pas confondre avec pending_payment d'un abonnement (renouvellement
+            refusé à régler).
+          type: [string, 'null']
+          enum: [paid, pending, failed, null]
+        payment_class_key:
+          description: Driver de paiement de la dernière transaction, payée ou non
+          type: [string, 'null']
     UserSchema:
       type: object
       properties:
@@ -4197,13 +4637,13 @@ components:
           description: UUID de l'utilisateur.
         refp:
           type: string
-          description: Référence P de l'utilisateur.
+          description: Lien de parrainage de l'utilisateur.
         has_active_subscription:
           type: boolean
           description: Indique si l'utilisateur a un abonnement actif.
-#        info:
-#          type: null
-#          description: Information sur l'utilisateur.
+        info:
+          type: [object, array, "null"]
+          description: Informations complémentaires enregistrées sur l'utilisateur (commentaires), null si aucune.
         external_id:
           type: string
           description: ID externe de l'utilisateur.
@@ -4214,10 +4654,12 @@ components:
           description: Liste des adresses de l'utilisateur.
         customerRevenue:
           type: string
-          description: Revenu du client.
+          description: Revenu du client (payé moins remboursé), chaîne formatée avec point décimal et virgule comme séparateur de milliers.
+          example: "1,234.56"
         customerRefund:
           type: string
-          description: Remboursement du client.
+          description: Montant remboursé au client, chaîne formatée avec point décimal et virgule comme séparateur de milliers.
+          example: "0.00"
         totalTransactionsSuccess:
           type: integer
           description: Total des transactions réussies.
@@ -4237,11 +4679,11 @@ components:
             - failed
         created_at:
           type: string
-          format: date-time
-          description: Date de création de l'erreur
+          description: Date de création de l'erreur, au format `Y-m-d H:i:s` (ex. "2026-01-15 08:30:00"), sans fuseau horaire
+          example: "2026-01-15 08:30:00"
         subscription_id:
-          type: ['string']
-          description: UUID de l'abonnement
+          type: [string, 'null']
+          description: UUID de l'abonnement (malgré le nom du champ, ce n'est pas l'identifiant numérique), null si l'erreur n'est rattachée à aucun abonnement
         order_id:
           type: [integer, 'null']
           description: ID de la commande Ciklik
