@@ -1766,7 +1766,9 @@ paths:
           example: 10
         - name: filter[status]
           in: query
-          description: Filtrer par statut de la commande
+          description: >-
+            Filtrer par statut de la commande. in_process : paiement en attente de la réponse de la passerelle, par
+            exemple un renouvellement Mollie dont l'issue n'est pas encore confirmée.
           schema:
             type: string
             enum:
@@ -2646,10 +2648,12 @@ paths:
           example: 456
         - name: filter[gateway]
           in: query
-          description: Filtrer par passerelle de paiement.
+          description: >-
+            Filtrer par moyen de paiement (clé de classe, correspondance exacte), par exemple
+            `StripeCreditCard`, `PayPlugCreditCard`, `MollieCreditCard`, `PaypalVault`, `GoCardlessDirectDebit`.
           schema:
             type: string
-          example: "stripe"
+          example: "MollieCreditCard"
         - name: filter[transaction_id]
           in: query
           description: Filtrer par identifiant de la transaction.
@@ -2692,7 +2696,10 @@ paths:
           example: 123
         - name: filter[failure_code]
           in: query
-          description: Filtrer par code d'échec de la transaction.
+          description: >-
+            Filtrer par code d'échec de la transaction. Seuls les codes de refus de carte de la liste (codes Stripe) sont
+            acceptés par ce filtre : les autres codes, dont ceux des transactions Mollie (`mandate_revoked`, motif de
+            refus de Mollie), ne sont pas filtrables.
           schema:
             type: string
             enum:
@@ -2788,7 +2795,7 @@ paths:
           schema:
             type: string
             maxLength: 255
-          example: "pi_1234567890"
+          example: "card_declined"
         - name: sort
           in: query
           description: "Trier les résultats (préfixer par - pour un tri descendant)"
@@ -3333,13 +3340,19 @@ components:
           $ref: '#/components/schemas/TransactionOrderSchema'
         gateway:
           type: string
-          description: La passerelle de paiement utilisée.
+          description: >-
+            Moyen de paiement de la transaction (clé de classe), par exemple `StripeCreditCard`, `PayPlugCreditCard`, `MollieCreditCard`, `PaypalVault`, `GoCardlessDirectDebit`.
+          example: "MollieCreditCard"
         transaction_id:
           type: string
-          description: L'identifiant de la transaction.
+          description: >-
+            L'identifiant de la transaction chez la passerelle. Pour Mollie, l'identifiant du paiement (`tr_...`).
         detail:
           type: string
-          description: Détails de la transaction.
+          description: >-
+            Détails de la transaction. Valeurs propres à Mollie : `pending` (renouvellement dont Mollie n'a pas encore
+            confirmé l'issue, la commande est alors `in_process`) et `replaced` (tentative en cours reprise par un
+            prélèvement suivant, qui porte le même paiement).
         token:
           type: string
           description: Le jeton de la transaction.
@@ -3357,13 +3370,19 @@ components:
           description: Indique si la transaction a été remboursée.
         source_id:
           type: string
-          description: L'identifiant de la source.
+          description: >-
+            L'identifiant de la source (moyen de paiement débité). Pour Mollie, en général le mandat de la carte
+            enregistrée (`mdt_...`).
         failure_message:
           type: string
           description: Message d'échec de la transaction.
         failure_code:
           type: string
-          description: Code d'échec de la transaction.
+          description: >-
+            Code d'échec de la transaction. Pour Mollie : le motif de refus donné par Mollie, ou un code posé par
+            Ciklik quand la requête de prélèvement est refusée (`mandate_revoked` : carte retirée ou mandat révoqué,
+            `merchant_forbidden` : clé API du site refusée par Mollie, `forbidden` : requête refusée,
+            `payment_method_missing` : aucun client Mollie enregistré).
         invoice_id:
           type: integer
           description: L'identifiant de la facture associée à la transaction.
@@ -3386,7 +3405,9 @@ components:
           description: Date et heure de mise à jour de la transaction.
         payment_intent_id:
           type: string
-          description: L'identifiant de l'intention de paiement associée à la transaction.
+          description: >-
+            L'identifiant de l'intention de paiement associée à la transaction. Pour Mollie, l'identifiant du paiement
+            (`tr_...`).
     TransactionOrderSchema:
       type: object
       description: >
@@ -3636,7 +3657,9 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/PaymentMethodEntity"
-              description: Les méthodes de paiement associées à l'entité "Website".
+              description: >-
+                Les moyens de paiement actifs du site (rattachés au site et dont la passerelle est configurée et
+                activée), un par clé de classe.
             webhooks:
               type: object
               description: Liste des évènements actifs et URL correspondante
@@ -3783,7 +3806,10 @@ components:
               description: La description de la méthode de paiement en français.
         class_key:
           type: string
-          description: La clé de classe associée à la méthode de paiement.
+          description: >-
+            Clé de classe du moyen de paiement, par exemple `StripeCreditCard`, `PayPlugCreditCard`, `MollieCreditCard`, `PaypalVault`, `GoCardlessDirectDebit`. `MollieCreditCard` : carte bancaire
+            via le compte Mollie du marchand, paiement sur la page hébergée par Mollie.
+          example: "MollieCreditCard"
         gateway_id:
           type: integer
           description: L'identifiant de la passerelle de paiement associée à la méthode de paiement.
@@ -4602,7 +4628,8 @@ components:
           description: id transaction payée
           type: string
         paid_class_key:
-          description: driver de paiement
+          description: >-
+            Moyen de paiement (clé de classe) de la transaction payée, par exemple `StripeCreditCard`, `PayPlugCreditCard`, `MollieCreditCard`, `PaypalVault`, `GoCardlessDirectDebit`.
           type: string
         prestashop_order_id:
           description: Correspondance commande PrestaShop
@@ -4614,12 +4641,15 @@ components:
           description: >-
             État du paiement. paid : une transaction est payée ; pending : paiement PayPal accepté mais pas encore
             encaissé (prélèvement bancaire), la commande est terminée sans être payée ; failed : dernière transaction en
-            échec ; null : aucune transaction. Ne pas confondre avec pending_payment d'un abonnement (renouvellement
+            échec ; null : aucune transaction, ou renouvellement Mollie dont l'issue n'est pas encore confirmée (commande
+            in_process, transaction au détail pending). Ne pas confondre avec pending_payment d'un abonnement (renouvellement
             refusé à régler).
           type: [string, 'null']
           enum: [paid, pending, failed, null]
         payment_class_key:
-          description: Driver de paiement de la dernière transaction, payée ou non
+          description: >-
+            Moyen de paiement (clé de classe) de la dernière transaction, payée ou non, par exemple
+            `StripeCreditCard`, `PayPlugCreditCard`, `MollieCreditCard`, `PaypalVault`, `GoCardlessDirectDebit`.
           type: [string, 'null']
     UserSchema:
       type: object

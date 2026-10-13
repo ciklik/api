@@ -12,7 +12,7 @@ Opérations liées aux commandes
 | `filter[address_id]` | query | integer | non | Filtrer par ID de l'adresse |
 | `filter[invoice_address_id]` | query | integer | non | Filtrer par ID de l'adresse de facturation |
 | `filter[transporter_id]` | query | integer | non | Filtrer par ID du transporteur |
-| `filter[status]` | query | string | non | Filtrer par statut de la commande |
+| `filter[status]` | query | string | non | Filtrer par statut de la commande. in_process : paiement en attente de la réponse de la passerelle, par exemple un renouvellement Mollie dont l'issue n'est pas encore confirmée. |
 | `filter[subscription_uuid]` | query | string | non | Filtrer par UUID de l'abonnement |
 | `filter[invoice_id]` | query | integer | non | Filtrer par ID de la facture |
 | `filter[total_paid]` | query | number | non | Filtrer par montant total payé |
