@@ -9,7 +9,7 @@ Opérations liées aux transactions
 | Paramètre | Où | Type | Obligatoire | Description |
 |---|---|---|---|---|
 | `filter[order_id]` | query | integer | non | Filtrer par ID de la commande. |
-| `filter[gateway]` | query | string | non | Filtrer par passerelle de paiement. |
+| `filter[gateway]` | query | string | non | Filtrer par moyen de paiement (clé de classe, correspondance exacte), par exemple `StripeCreditCard`, `PayPlugCreditCard`, `MollieCreditCard`, `PaypalVault`, `GoCardlessDirectDebit`. |
 | `filter[transaction_id]` | query | string | non | Filtrer par identifiant de la transaction. |
 | `filter[detail]` | query | string | non | Filtrer par détail de la transaction (correspondance exacte). |
 | `filter[token]` | query | string | non | Filtrer par jeton de la transaction. |
@@ -17,7 +17,7 @@ Opérations liées aux transactions
 | `filter[amount]` | query | number | non | Filtrer par montant (correspondance exacte). |
 | `filter[refunded]` | query | boolean | non | Filtrer par transactions remboursées. |
 | `filter[user_id]` | query | integer | non | Filtrer par ID de l'utilisateur. |
-| `filter[failure_code]` | query | string | non | Filtrer par code d'échec de la transaction. |
+| `filter[failure_code]` | query | string | non | Filtrer par code d'échec de la transaction. Seuls les codes de refus de carte de la liste (codes Stripe) sont acceptés par ce filtre : les autres codes, dont ceux des transactions Mollie (`mandate_revoked`, motif de refus de Mollie), ne sont pas filtrables. |
 | `filter[invoice_id]` | query | integer | non | Filtrer par ID de la facture. |
 | `filter[created_at_before]` | query | string | non | Filtrer par date de création avant. |
 | `filter[created_at_after]` | query | string | non | Filtrer par date de création après. |
@@ -60,7 +60,7 @@ Réponse 200 :
         "countTransactions": 1,
         "choices": null
       },
-      "gateway": "string",
+      "gateway": "MollieCreditCard",
       "transaction_id": "string",
       "detail": "string",
       "token": "string",
@@ -145,7 +145,7 @@ Réponse 200 :
       "countTransactions": 1,
       "choices": null
     },
-    "gateway": "string",
+    "gateway": "MollieCreditCard",
     "transaction_id": "string",
     "detail": "string",
     "token": "string",
@@ -212,7 +212,7 @@ Réponse 200 :
       "countTransactions": 1,
       "choices": null
     },
-    "gateway": "string",
+    "gateway": "MollieCreditCard",
     "transaction_id": "string",
     "detail": "string",
     "token": "string",

@@ -33,7 +33,7 @@ Réponse 200 :
         "description": {
           "fr": "string"
         },
-        "class_key": "string",
+        "class_key": "MollieCreditCard",
         "gateway_id": 1,
         "created_at": "string",
         "updated_at": "string",
@@ -89,7 +89,7 @@ Réponse 200 :
         "description": {
           "fr": "string"
         },
-        "class_key": "string",
+        "class_key": "MollieCreditCard",
         "gateway_id": 1,
         "created_at": "string",
         "updated_at": "string",
