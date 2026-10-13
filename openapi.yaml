@@ -2697,44 +2697,14 @@ paths:
         - name: filter[failure_code]
           in: query
           description: >-
-            Filtrer par code d'échec de la transaction. Seuls les codes de refus de carte de la liste (codes Stripe) sont
-            acceptés par ce filtre : les autres codes, dont ceux des transactions Mollie (`mandate_revoked`, motif de
-            refus de Mollie), ne sont pas filtrables.
+            Filtrer par code d'échec de la transaction (correspondance exacte). Le code est celui qu'écrit la
+            passerelle : code de refus Stripe (`card_declined`, `insufficient_funds`...), motif de refus de Mollie
+            (`authentication_failed`, `card_expired`...) ou code posé par Ciklik (`mandate_revoked`,
+            `merchant_forbidden`, `forbidden`, `payment_method_missing`...).
           schema:
             type: string
-            enum:
-              - authentication_required
-              - card_decline_rate_limit_exceeded
-              - card_declined
-              - card_not_supported
-              - card_velocity_exceeded
-              - cvc
-              - do_not_honor
-              - exp_month
-              - expired_card
-              - fraudulent
-              - generic_decline
-              - incorrect_cvc
-              - incorrect_number
-              - insufficient_funds
-              - invalid_account
-              - invalid_pin
-              - invalid_request_error
-              - lost_card
-              - number
-              - payment_method
-              - pickup_card
-              - processing_error
-              - reenter_transaction
-              - restricted_card
-              - revocation_of_all_authorizations
-              - revocation_of_authorization
-              - statement_descriptor
-              - statement_descriptor_suffix
-              - stolen_card
-              - transaction_not_allowed
-              - try_again_later
-          example: "card_declined"
+            maxLength: 255
+          example: "mandate_revoked"
         - name: filter[invoice_id]
           in: query
           description: Filtrer par ID de la facture.
