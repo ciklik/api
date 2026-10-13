@@ -17,7 +17,7 @@ Opérations liées aux transactions
 | `filter[amount]` | query | number | non | Filtrer par montant (correspondance exacte). |
 | `filter[refunded]` | query | boolean | non | Filtrer par transactions remboursées. |
 | `filter[user_id]` | query | integer | non | Filtrer par ID de l'utilisateur. |
-| `filter[failure_code]` | query | string | non | Filtrer par code d'échec de la transaction. Seuls les codes de refus de carte de la liste (codes Stripe) sont acceptés par ce filtre : les autres codes, dont ceux des transactions Mollie (`mandate_revoked`, motif de refus de Mollie), ne sont pas filtrables. |
+| `filter[failure_code]` | query | string | non | Filtrer par code d'échec de la transaction (correspondance exacte). Le code est celui qu'écrit la passerelle : code de refus Stripe (`card_declined`, `insufficient_funds`...), motif de refus de Mollie (`authentication_failed`, `card_expired`...) ou code posé par Ciklik (`mandate_revoked`, `merchant_forbidden`, `forbidden`, `payment_method_missing`...). |
 | `filter[invoice_id]` | query | integer | non | Filtrer par ID de la facture. |
 | `filter[created_at_before]` | query | string | non | Filtrer par date de création avant. |
 | `filter[created_at_after]` | query | string | non | Filtrer par date de création après. |
